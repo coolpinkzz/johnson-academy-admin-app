@@ -1,6 +1,9 @@
 import type { Metadata } from "next";
 import { Geist, Geist_Mono } from "next/font/google";
 import "./globals.css";
+import Providers from "./providers";
+import DashboardSidebar from "@/components/DashboardSidebar";
+import { ModalContainer } from "@/components/modal";
 
 const geistSans = Geist({
   variable: "--font-geist-sans",
@@ -19,15 +22,26 @@ export const metadata: Metadata = {
 
 export default function RootLayout({
   children,
-}: Readonly<{
+}: {
   children: React.ReactNode;
-}>) {
+}) {
   return (
     <html lang="en">
       <body
         className={`${geistSans.variable} ${geistMono.variable} antialiased`}
       >
-        {children}
+        <Providers>
+          <div className="flex h-screen bg-gray-50">
+            {/* Sidebar - now self-sized */}
+            <DashboardSidebar />
+
+            {/* Main Content grows automatically */}
+            <div className="flex-1 flex flex-col overflow-y-auto">
+              {children}
+            </div>
+          </div>
+          <ModalContainer />
+        </Providers>
       </body>
     </html>
   );
