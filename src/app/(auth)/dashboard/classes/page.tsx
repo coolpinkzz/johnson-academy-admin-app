@@ -185,13 +185,23 @@ const ClassesPage = () => {
                   <div className="flex items-center justify-between mb-4">
                     <div className="w-10 h-10 rounded-full bg-blue-100 flex items-center justify-center">
                       <img
-                        src={classItem.courseId.image}
-                        alt={classItem.courseId.name}
+                        src={
+                          typeof classItem.courseId === "string"
+                            ? ""
+                            : classItem.courseId.image
+                        }
+                        alt={
+                          typeof classItem.courseId === "string"
+                            ? ""
+                            : classItem.courseId.name || ""
+                        }
                         className="h-10 w-10 text-blue-600 object-contain p-1"
                       />
                     </div>
                     <span className="text-xs text-gray-500 bg-gray-100 px-2 py-1 rounded">
-                      {classItem.courseId.instrument}
+                      {typeof classItem.courseId === "string"
+                        ? ""
+                        : classItem.courseId.instrument || ""}
                     </span>
                   </div>
 
@@ -209,7 +219,7 @@ const ClassesPage = () => {
                     <div className="flex items-center gap-2 text-sm text-gray-600">
                       <BookOpen className="h-4 w-4 text-green-500" />
                       <span>
-                        Course: {getCourseName(classItem.courseId.name)}
+                        Course: {getCourseName(classItem.courseId as string)}
                       </span>
                     </div>
                     <div className="flex items-center gap-2 text-sm text-gray-600">

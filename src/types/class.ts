@@ -10,7 +10,7 @@ export interface IClass {
   id?: string;
   name: string;
   teacherId: string;
-  courseId: ICourse;
+  courseId: ICourse | string;
   students: string[];
 }
 
