@@ -32,15 +32,11 @@ export default function RootLayout({
       >
         <Providers>
           <div className="flex h-screen bg-gray-50">
-            {/* Sidebar - now self-sized */}
-            <DashboardSidebar />
-
-            {/* Main Content grows automatically */}
+            <ModalContainer />
             <div className="flex-1 flex flex-col overflow-y-auto">
               {children}
             </div>
           </div>
-          <ModalContainer />
         </Providers>
       </body>
     </html>
