@@ -159,7 +159,8 @@ const CoursesPage = () => {
                       {course.syllabus && course.syllabus.length > 0
                         ? (course.syllabus[0]?.learning?.length || 0) +
                           (course.syllabus[0]?.theory?.length || 0) +
-                          (course.syllabus[0]?.technical?.length || 0)
+                          (course.syllabus[0]?.technical?.length || 0) +
+                          (course.syllabus[0]?.others?.length || 0)
                         : 0}{" "}
                       {course.syllabus && course.syllabus.length > 0
                         ? "lessons"

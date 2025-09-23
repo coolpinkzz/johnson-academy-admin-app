@@ -18,6 +18,7 @@ import {
   Bell,
   ChevronLeft,
   ChevronRight,
+  FileBarChart,
 } from "lucide-react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
@@ -68,6 +69,16 @@ const sidebarItems: SidebarItem[] = [
     icon: <GraduationCap className="h-4 w-4" />,
     badge: "12",
   },
+  {
+    title: "Attendance",
+    href: "/dashboard/attendance",
+    icon: <Clock className="h-4 w-4" />,
+  },
+  {
+    title: "Monthly Reports",
+    href: "/dashboard/monthly-reports",
+    icon: <FileBarChart className="h-4 w-4" />,
+  },
   // {
   //   title: "Schedule",
   //   href: "/dashboard/schedule",
@@ -83,11 +94,6 @@ const sidebarItems: SidebarItem[] = [
   //   title: "Grades",
   //   href: "/dashboard/grades",
   //   icon: <Award className="h-4 w-4" />,
-  // },
-  // {
-  //   title: "Attendance",
-  //   href: "/dashboard/attendance",
-  //   icon: <Clock className="h-4 w-4" />,
   // },
   // {
   //   title: "Analytics",

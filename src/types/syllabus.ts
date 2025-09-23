@@ -10,4 +10,5 @@ export interface SyllabusResponse {
   learning: Module[];
   theory: Module[];
   technical: Module[];
+  others: Module[];
 }

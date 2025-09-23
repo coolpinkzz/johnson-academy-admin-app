@@ -71,6 +71,8 @@ const SyllabusPage = () => {
     queryFn: () => getSyllabus(),
   });
 
+  console.log(syllabusData);
+
   // Filter syllabus based on search term
   const filteredSyllabus = useMemo(() => {
     if (!searchTerm) return syllabusData;
@@ -93,7 +95,8 @@ const SyllabusPage = () => {
     return (
       syllabus?.learning?.length +
       syllabus?.theory?.length +
-      syllabus?.technical?.length
+      syllabus?.technical?.length +
+      syllabus?.others?.length
     );
   };
 
@@ -235,6 +238,10 @@ const SyllabusPage = () => {
                       <span>
                         Technical: {syllabus?.technical?.length} modules
                       </span>
+                    </div>
+                    <div className="flex items-center gap-2 text-sm text-gray-600">
+                      <GraduationCap className="h-4 w-4 text-green-500" />
+                      <span>Others: {syllabus?.others?.length} modules</span>
                     </div>
                   </div>
 

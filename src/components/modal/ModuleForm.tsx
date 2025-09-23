@@ -46,6 +46,7 @@ export function ModuleForm({
     { value: "theory", label: "Theory" },
     { value: "technical", label: "Technical" },
     { value: "learning", label: "Learning" },
+    { value: "others", label: "Others" },
   ];
 
   // Fetch syllabi on component mount
@@ -185,7 +186,7 @@ export function ModuleForm({
           onChange={(e) =>
             handleInputChange(
               "type",
-              e.target.value as "theory" | "technical" | "learning"
+              e.target.value as "theory" | "technical" | "learning" | "others"
             )
           }
           className={`w-full px-3 py-2 border rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 ${

@@ -97,3 +97,12 @@ export interface User {
   courses: string[];
   progress: string[];
 }
+
+// Student data returned from getStudentsByClass endpoint
+export interface StudentInClass {
+  id: string;
+  name: string;
+  email: string;
+  role: string;
+  profilePicture: string | null;
+}

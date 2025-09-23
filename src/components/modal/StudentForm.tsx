@@ -78,7 +78,7 @@ export function StudentForm({
   };
 
   // register student
-  const { isPending, error, data, mutate } = useMutation({
+  const { isPending, error, data, mutateAsync } = useMutation({
     mutationFn: async (data: StudentFormData): Promise<any> => {
       const response = await client("/auth/register", {
         method: "POST",
@@ -101,6 +101,7 @@ export function StudentForm({
     e.preventDefault();
 
     if (validateForm()) {
+      let profileUrl = "";
       // upload profile picture if user has selected a file
       if (fileInputRef.current?.files?.[0]) {
         const response = await uploadProfilePicture(
@@ -109,13 +110,14 @@ export function StudentForm({
           type === "student" ? "student,profile" : "teacher,profile"
         );
         if (response.data.url) {
+          profileUrl = response.data.url;
           setFormData((prev) => ({
             ...prev,
-            profilePicture: response.data.url,
+            profilePicture: profileUrl,
           }));
         }
       }
-      mutate(formData);
+      await mutateAsync({ ...formData, profilePicture: profileUrl });
     }
   };
 

@@ -1,7 +1,7 @@
 import { ServerResponse } from "@/models/common/client";
 import { client } from "./api-client";
 import { AuthService } from "./auth";
-import { UserResponse } from "@/types/user";
+import { UserResponse, StudentInClass } from "@/types/user";
 
 export const getStudents = async (): Promise<UserResponse> => {
   const response: ServerResponse<UserResponse> = await client(
@@ -41,4 +41,21 @@ export const deleteStudent = async (userId: string) => {
   });
 
   return response;
+};
+
+// Get students for a specific class
+export const getStudentsByClass = async (
+  classId: string
+): Promise<StudentInClass[]> => {
+  const response: ServerResponse<StudentInClass[]> = await client(
+    `/classes/${classId}/students`,
+    {
+      method: "GET",
+      headers: {
+        Authorization: `Bearer ${AuthService.getAccessToken()}`,
+      },
+    }
+  );
+
+  return response as unknown as StudentInClass[];
 };

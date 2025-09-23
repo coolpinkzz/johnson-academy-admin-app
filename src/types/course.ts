@@ -450,7 +450,7 @@ export interface Module {
   _id?: string;
   id?: string;
   syllabusId: string;
-  type: string;
+  type: "theory" | "technical" | "learning" | "others";
   title: string;
   description: string;
   session: number;
@@ -464,6 +464,7 @@ export interface Syllabus {
   learning: Module[];
   theory: Module[];
   technical: Module[];
+  others: Module[];
 }
 
 export interface Course {

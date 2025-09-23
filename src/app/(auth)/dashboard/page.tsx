@@ -9,14 +9,17 @@ import {
   BookOpen,
   Calendar,
   Award,
+  ClipboardCheck,
 } from "lucide-react";
 import React from "react";
 import { useModal } from "@/components/modal";
 import { StudentForm } from "@/components/modal/StudentForm";
+import { useRouter } from "next/navigation";
 
 const DashboardPage = () => {
   const { user } = useAuth();
   const { openModal } = useModal();
+  const router = useRouter();
 
   const stats = [
     {
@@ -99,7 +102,7 @@ const DashboardPage = () => {
         {/* Main Content */}
         <main className="flex-1 p-6">
           {/* Stats */}
-          <div className="grid gap-6 grid-cols-1 md:grid-cols-2 lg:grid-cols-4 mb-8">
+          {/* <div className="grid gap-6 grid-cols-1 md:grid-cols-2 lg:grid-cols-4 mb-8">
             {stats.map((stat, i) => (
               <div
                 key={i}
@@ -119,12 +122,12 @@ const DashboardPage = () => {
                 </div>
               </div>
             ))}
-          </div>
+          </div> */}
 
           {/* Content Grid */}
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
             {/* Recent Activities */}
-            <div className="bg-white border rounded-lg shadow-sm">
+            {/* <div className="bg-white border rounded-lg shadow-sm">
               <div className="p-4 border-b">
                 <h3 className="text-lg font-semibold">Recent Activities</h3>
               </div>
@@ -139,7 +142,7 @@ const DashboardPage = () => {
                   </div>
                 ))}
               </div>
-            </div>
+            </div> */}
 
             {/* Quick Actions */}
             <div className="bg-white border rounded-lg shadow-sm">
@@ -260,97 +263,10 @@ const DashboardPage = () => {
                   },
                   {
                     icon: (
-                      <TrendingUp className="h-8 w-8 text-gray-400 mx-auto mb-2" />
+                      <ClipboardCheck className="h-8 w-8 text-gray-400 mx-auto mb-2" />
                     ),
-                    text: "View Reports",
-                    onClick: () =>
-                      openModal({
-                        title: "Generate Report",
-                        size: "xl",
-                        content: (
-                          <div className="space-y-4">
-                            <div className="grid grid-cols-2 gap-4">
-                              <div>
-                                <label className="block text-sm font-medium text-gray-700 mb-1">
-                                  Report Type
-                                </label>
-                                <select className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500">
-                                  <option value="">Select report type</option>
-                                  <option value="student-performance">
-                                    Student Performance
-                                  </option>
-                                  <option value="attendance">
-                                    Attendance Report
-                                  </option>
-                                  <option value="course-completion">
-                                    Course Completion
-                                  </option>
-                                  <option value="financial">
-                                    Financial Report
-                                  </option>
-                                </select>
-                              </div>
-                              <div>
-                                <label className="block text-sm font-medium text-gray-700 mb-1">
-                                  Date Range
-                                </label>
-                                <select className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500">
-                                  <option value="last-week">Last Week</option>
-                                  <option value="last-month">Last Month</option>
-                                  <option value="last-quarter">
-                                    Last Quarter
-                                  </option>
-                                  <option value="last-year">Last Year</option>
-                                  <option value="custom">Custom Range</option>
-                                </select>
-                              </div>
-                            </div>
-                            <div>
-                              <label className="block text-sm font-medium text-gray-700 mb-1">
-                                Format
-                              </label>
-                              <div className="flex space-x-4">
-                                <label className="flex items-center">
-                                  <input
-                                    type="radio"
-                                    name="format"
-                                    value="pdf"
-                                    className="mr-2"
-                                    defaultChecked
-                                  />
-                                  <span className="text-sm">PDF</span>
-                                </label>
-                                <label className="flex items-center">
-                                  <input
-                                    type="radio"
-                                    name="format"
-                                    value="excel"
-                                    className="mr-2"
-                                  />
-                                  <span className="text-sm">Excel</span>
-                                </label>
-                                <label className="flex items-center">
-                                  <input
-                                    type="radio"
-                                    name="format"
-                                    value="csv"
-                                    className="mr-2"
-                                  />
-                                  <span className="text-sm">CSV</span>
-                                </label>
-                              </div>
-                            </div>
-                            <div className="flex justify-end space-x-2 pt-4">
-                              <button className="px-4 py-2 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-md hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-blue-500">
-                                Cancel
-                              </button>
-                              <button className="px-4 py-2 text-sm font-medium text-white bg-blue-600 border border-transparent rounded-md hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500">
-                                Generate Report
-                              </button>
-                            </div>
-                          </div>
-                        ),
-                      }),
+                    text: "Attendance",
+                    onClick: () => router.push("/dashboard/attendance"),
                   },
                 ].map((action, idx) => (
                   <button

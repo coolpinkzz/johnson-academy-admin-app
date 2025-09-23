@@ -4,14 +4,38 @@ import { client } from "./api-client";
 import { ServerResponse } from "@/models/common/client";
 
 export const getClasses = async (): Promise<ClassResponse> => {
-  const response: ServerResponse<ClassResponse> = await client("/classes", {
-    method: "GET",
-    headers: {
-      Authorization: `Bearer ${AuthService.getAccessToken()}`,
-    },
-  });
+  try {
+    const response: ServerResponse<ClassResponse> = await client("/classes", {
+      method: "GET",
+      headers: {
+        Authorization: `Bearer ${AuthService.getAccessToken()}`,
+      },
+    });
 
-  return response as unknown as ClassResponse;
+    return response as unknown as ClassResponse;
+  } catch (error) {
+    console.error("Error fetching classes:", error);
+    throw error;
+  }
+};
+
+export const getClassById = async (classId: string): Promise<IClass> => {
+  try {
+    const response: ServerResponse<IClass> = await client(
+      `/classes/${classId}`,
+      {
+        method: "GET",
+        headers: {
+          Authorization: `Bearer ${AuthService.getAccessToken()}`,
+        },
+      }
+    );
+
+    return response as unknown as IClass;
+  } catch (error) {
+    console.error("Error fetching class:", error);
+    throw error;
+  }
 };
 
 export const createClass = async (classData: IClass): Promise<IClass> => {
