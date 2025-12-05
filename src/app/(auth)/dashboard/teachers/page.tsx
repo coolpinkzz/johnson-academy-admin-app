@@ -4,15 +4,13 @@ import ProtectedRoute from "@/components/ProtectedRoute";
 import { StudentForm } from "@/components/modal/StudentForm";
 import { useModal } from "@/hooks/use-modal";
 import { getTeachers } from "@/services/teacher";
-import { Bell, Plus, Search, Filter, Menu, Trash2 } from "lucide-react";
-import React, { useState } from "react";
-import { User, UserResponse } from "@/types/user";
+import { Bell, Plus, Search, Filter, Menu } from "lucide-react";
+import React from "react";
+import { UserResponse } from "@/types/user";
 import { useQuery } from "@tanstack/react-query";
-import { DeleteConfirmation } from "@/components/modal/ConfirmationDialog";
 
 const TeacherPage = () => {
-  const { openModal, closeModal } = useModal();
-  const [isDeleting, setIsDeleting] = useState<string | null>(null);
+  const { openModal } = useModal();
   const {
     data: teachers,
     isLoading,
@@ -22,43 +20,18 @@ const TeacherPage = () => {
     queryFn: () => getTeachers(),
   });
 
-  // delete teacher
-  const deleteTeacher = async (userId: string) => {
-    try {
-      setIsDeleting(userId);
-
-      await deleteTeacher(userId);
-    } catch (error) {
-      console.error("Error deleting teacher:", error);
-    } finally {
-      setIsDeleting(null);
-    }
-  };
-
-  // Handle delete button click
-  const handleDeleteClick = (teacher: User) => {
-    openModal({
-      title: "Confirm Deletion",
-      content: (
-        <DeleteConfirmation
-          title="Delete Teacher"
-          message={`Are you sure you want to delete "${teacher.name}"? This action cannot be undone.`}
-          itemName={teacher.name}
-          onConfirm={() => deleteTeacher(teacher.id)}
-          onCancel={() => closeModal()}
-        />
-      ),
-    });
-  };
-
   const handleAddTeacher = () => {
-    console.log("Add Teacher");
     openModal({
       title: "Add Teacher",
       content: <StudentForm submitLabel="Add Teacher" type="teacher" />,
     });
   };
 
+  if (isLoading) {
+    return <div>Loading...</div>;
+  }
+
+  console.log(teachers);
   return (
     <ProtectedRoute>
       <div className="flex flex-col h-full">
@@ -130,9 +103,6 @@ const TeacherPage = () => {
                     <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                       Courses
                     </th>
-                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                      Actions
-                    </th>
                   </tr>
                 </thead>
                 <tbody className="bg-white divide-y divide-gray-200">
@@ -169,27 +139,6 @@ const TeacherPage = () => {
                       </td>
                       <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
                         {teacher.courses.length}
-                      </td>
-                      <td className="px-6 py-4 whitespace-nowrap text-sm font-medium">
-                        {/* <button className="text-blue-600 hover:text-blue-800 mr-3">
-                          Edit
-                        </button> */}
-                        <button
-                          onClick={() => handleDeleteClick(teacher)}
-                          className="text-red-600 hover:text-red-800"
-                        >
-                          {isDeleting === teacher.id ? (
-                            <>
-                              <div className="w-4 h-4 border-2 border-red-600 border-t-transparent rounded-full animate-spin"></div>
-                              Deleting...
-                            </>
-                          ) : (
-                            <span className="flex items-center gap-1">
-                              <Trash2 className="h-4 w-4" />
-                              Delete
-                            </span>
-                          )}
-                        </button>
                       </td>
                     </tr>
                   ))}

@@ -1,7 +1,8 @@
 import { ServerResponse } from "@/models/common/client";
 import { client } from "./api-client";
 import { AuthService } from "./auth";
-import { UserResponse, StudentInClass } from "@/types/user";
+import { UserResponse, StudentInClass, User } from "@/types/user";
+import { StudentProgressResponse } from "@/types/progress";
 
 export const getStudents = async (): Promise<UserResponse> => {
   const response: ServerResponse<UserResponse> = await client(
@@ -19,7 +20,7 @@ export const getStudents = async (): Promise<UserResponse> => {
 
 export const searchStudents = async (query: string): Promise<UserResponse> => {
   const response: ServerResponse<UserResponse> = await client(
-    `/users?role=student&name=${encodeURIComponent(query)}`,
+    `/users?role=student&rollNumber=${encodeURIComponent(query)}`,
     {
       method: "GET",
       headers: {
@@ -58,4 +59,37 @@ export const getStudentsByClass = async (
   );
 
   return response as unknown as StudentInClass[];
+};
+
+// Get student by ID
+export const getStudentById = async (studentId: string): Promise<User> => {
+  const response: ServerResponse<User> = await client(
+    `/users/student/${studentId}`,
+    {
+      method: "GET",
+      headers: {
+        Authorization: `Bearer ${AuthService.getAccessToken()}`,
+      },
+    }
+  );
+
+  return response as unknown as User;
+};
+
+// Get student progress for a specific class
+export const getStudentProgress = async (
+  studentId: string,
+  classId: string
+): Promise<StudentProgressResponse> => {
+  const response: ServerResponse<StudentProgressResponse> = await client(
+    `/student-progress/student/${studentId}/class/${classId}`,
+    {
+      method: "GET",
+      headers: {
+        Authorization: `Bearer ${AuthService.getAccessToken()}`,
+      },
+    }
+  );
+
+  return response as unknown as StudentProgressResponse;
 };

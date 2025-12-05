@@ -51,7 +51,6 @@ const sidebarItems: SidebarItem[] = [
     title: "Courses",
     href: "/dashboard/courses",
     icon: <BookOpen className="h-4 w-4" />,
-    badge: "24",
   },
   {
     title: "Syllabus",
@@ -67,7 +66,6 @@ const sidebarItems: SidebarItem[] = [
     title: "Classes",
     href: "/dashboard/classes",
     icon: <GraduationCap className="h-4 w-4" />,
-    badge: "12",
   },
   {
     title: "Attendance",

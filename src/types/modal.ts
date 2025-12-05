@@ -2,7 +2,7 @@ export interface ModalData {
   id: string;
   title?: string;
   content: React.ReactNode;
-  size?: "sm" | "md" | "lg" | "xl" | "full";
+  size?: "sm" | "md" | "lg" | "xl" | "half" | "full";
   onClose?: () => void;
   closeOnOverlayClick?: boolean;
   closeOnEscape?: boolean;

@@ -10,17 +10,30 @@ import { client } from "@/services/api-client";
 import AuthService, { useAuth } from "@/services/auth";
 import { UserResponse } from "@/types/user";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
-import { Bell, Plus, Search, Filter, Menu, Trash2, Edit } from "lucide-react";
+import {
+  Bell,
+  Plus,
+  Search,
+  Filter,
+  Menu,
+  Trash2,
+  Edit,
+  Eye,
+} from "lucide-react";
 import React, { useState } from "react";
+import { useRouter } from "next/navigation";
 import { User } from "@/types/user";
-import { deleteStudent, getStudents } from "@/services/student";
+import { deleteStudent, getStudents, searchStudents } from "@/services/student";
 import { StudentForm } from "@/components/modal";
+import Image from "next/image";
 
 const StudentsPage = () => {
   const { user } = useAuth();
   const { openModal, closeModal } = useModalContext();
   const queryClient = useQueryClient();
+  const router = useRouter();
   const [isDeleting, setIsDeleting] = useState<string | null>(null);
+  const [searchQuery, setSearchQuery] = useState<string>("");
 
   // get students
   const {
@@ -28,8 +41,13 @@ const StudentsPage = () => {
     isLoading,
     error,
   } = useQuery<UserResponse>({
-    queryKey: ["students"],
-    queryFn: () => getStudents(),
+    queryKey: ["students", searchQuery],
+    queryFn: () => {
+      if (searchQuery.trim()) {
+        return searchStudents(searchQuery.trim());
+      }
+      return getStudents();
+    },
   });
 
   // Delete user function
@@ -75,6 +93,21 @@ const StudentsPage = () => {
   const handleEditClick = (student: User) => {
     // TODO: Implement edit functionality
     console.log("Edit student:", student);
+  };
+
+  // Handle view button click
+  const handleViewClick = (student: User) => {
+    router.push(`/dashboard/students/${student.id}`);
+  };
+
+  // Handle search input change
+  const handleSearchChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    setSearchQuery(e.target.value);
+  };
+
+  // Handle search clear
+  const handleClearSearch = () => {
+    setSearchQuery("");
   };
 
   return (
@@ -124,15 +157,44 @@ const StudentsPage = () => {
                 <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400" />
                 <input
                   type="text"
-                  placeholder="Search students..."
-                  className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                  placeholder="Search by roll number..."
+                  value={searchQuery}
+                  onChange={handleSearchChange}
+                  className="w-full pl-10 pr-10 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
                 />
+                {searchQuery && (
+                  <button
+                    onClick={handleClearSearch}
+                    className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600 transition-colors"
+                    title="Clear search"
+                  >
+                    <svg
+                      className="h-4 w-4"
+                      fill="none"
+                      stroke="currentColor"
+                      viewBox="0 0 24 24"
+                    >
+                      <path
+                        strokeLinecap="round"
+                        strokeLinejoin="round"
+                        strokeWidth={2}
+                        d="M6 18L18 6M6 6l12 12"
+                      />
+                    </svg>
+                  </button>
+                )}
               </div>
               <button className="flex items-center gap-2 px-4 py-2 border border-gray-300 rounded-lg hover:bg-gray-50 transition-colors">
                 <Filter className="h-4 w-4" />
                 Filters
               </button>
             </div>
+            {searchQuery && (
+              <div className="mt-3 text-sm text-gray-600">
+                Searching for roll number:{" "}
+                <span className="font-semibold">{searchQuery}</span>
+              </div>
+            )}
           </div>
 
           {/* Students Table */}
@@ -191,11 +253,21 @@ const StudentsPage = () => {
                     </svg>
                   </div>
                   <p className="text-gray-900 font-medium mb-2">
-                    No students found
+                    {searchQuery ? "No students found" : "No students found"}
                   </p>
-                  <p className="text-gray-500">
-                    Get started by adding your first student
+                  <p className="text-gray-500 mb-3">
+                    {searchQuery
+                      ? `No student found with roll number "${searchQuery}"`
+                      : "Get started by adding your first student"}
                   </p>
+                  {searchQuery && (
+                    <button
+                      onClick={handleClearSearch}
+                      className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
+                    >
+                      Clear Search
+                    </button>
+                  )}
                 </div>
               ) : (
                 <table className="w-full">
@@ -205,7 +277,10 @@ const StudentsPage = () => {
                         Student
                       </th>
                       <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                        Courses
+                        Roll Number
+                      </th>
+                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                        Classes
                       </th>
                       <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                         Actions
@@ -217,54 +292,67 @@ const StudentsPage = () => {
                       <tr key={student.id} className="hover:bg-gray-50">
                         <td className="px-6 py-4 whitespace-nowrap">
                           <div className="flex items-center">
-                            <div className="h-10 w-10 rounded-full bg-blue-600 flex items-center justify-center text-white text-sm font-medium">
-                              {student.name.charAt(0)}
-                            </div>
-                            <div className="ml-4">
-                              <div className="text-sm font-medium text-gray-900">
-                                {student.name}
-                              </div>
-                              <div className="text-sm text-gray-500">
-                                {student.email}
-                              </div>
-                            </div>
+                            <Image
+                              src={
+                                student.profilePicture ||
+                                require("@/assets/avatar.png")
+                              }
+                              alt={student.name}
+                              width={40}
+                              height={40}
+                              className="rounded-full"
+                            />
+                            <div className="ml-4"> {student.name} </div>
                           </div>
                         </td>
                         <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-                          {Array.isArray(student.courses)
-                            ? student.courses.length > 0
-                              ? `${student.courses.length} course${
-                                  student.courses.length !== 1 ? "s" : ""
-                                }`
-                              : "No courses"
-                            : student.courses || "No courses"}
+                          {student.rollNumber || "Not assigned"}
                         </td>
+                        <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
+                          {Array.isArray(student.classes)
+                            ? student.classes.length > 0
+                              ? `${student.classes.length} class${
+                                  student.classes.length !== 1 ? "es" : ""
+                                }`
+                              : "No classes"
+                            : student.classes || "No classes"}
+                        </td>
+
                         <td className="px-6 py-4 whitespace-nowrap text-sm font-medium">
-                          {/* <button
-                            onClick={() => handleEditClick(student)}
-                            className="text-blue-600 hover:text-blue-800 mr-3 flex items-center gap-1 hover:bg-blue-50 px-2 py-1 rounded transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
-                            disabled={isDeleting === student.id}
-                          >
-                            <Edit className="h-4 w-4" />
-                            Edit
-                          </button> */}
-                          <button
-                            onClick={() => handleDeleteClick(student)}
-                            className="text-red-600 hover:text-red-800 flex items-center gap-1 hover:bg-red-50 px-2 py-1 rounded transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
-                            disabled={isDeleting === student.id}
-                          >
-                            {isDeleting === student.id ? (
-                              <>
-                                <div className="w-4 h-4 border-2 border-red-600 border-t-transparent rounded-full animate-spin"></div>
-                                Deleting...
-                              </>
-                            ) : (
-                              <>
-                                <Trash2 className="h-4 w-4" />
-                                Delete
-                              </>
-                            )}
-                          </button>
+                          <div className="flex items-center gap-2">
+                            <button
+                              onClick={() => handleViewClick(student)}
+                              className="text-blue-600 hover:text-blue-800 flex items-center gap-1 hover:bg-blue-50 px-2 py-1 rounded transition-colors"
+                            >
+                              <Eye className="h-4 w-4" />
+                              View
+                            </button>
+                            {/* <button
+                              onClick={() => handleEditClick(student)}
+                              className="text-green-600 hover:text-green-800 flex items-center gap-1 hover:bg-green-50 px-2 py-1 rounded transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                              disabled={isDeleting === student.id}
+                            >
+                              <Edit className="h-4 w-4" />
+                              Edit
+                            </button> */}
+                            <button
+                              onClick={() => handleDeleteClick(student)}
+                              className="text-red-600 hover:text-red-800 flex items-center gap-1 hover:bg-red-50 px-2 py-1 rounded transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                              disabled={isDeleting === student.id}
+                            >
+                              {isDeleting === student.id ? (
+                                <>
+                                  <div className="w-4 h-4 border-2 border-red-600 border-t-transparent rounded-full animate-spin"></div>
+                                  Deleting...
+                                </>
+                              ) : (
+                                <>
+                                  <Trash2 className="h-4 w-4" />
+                                  Delete
+                                </>
+                              )}
+                            </button>
+                          </div>
                         </td>
                       </tr>
                     ))}

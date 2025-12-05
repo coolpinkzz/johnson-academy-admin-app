@@ -198,57 +198,61 @@ const SyllabusPage = () => {
                 <div className="p-4 sm:p-6 flex-1">
                   <div className="flex items-center justify-between mb-4">
                     <img
-                      src={syllabus.courseId.image}
-                      alt={syllabus.courseId.name}
+                      src={syllabus?.courseId?.image}
+                      alt={syllabus?.courseId?.name}
                       className="w-10 h-10 rounded-full object-contain object-center border border-gray-200 p-1"
                     />
                     <span className="text-xs text-gray-500 bg-gray-100 px-2 py-1 rounded">
-                      {syllabus.courseId.instrument}
+                      {syllabus?.courseId?.instrument}
                     </span>
                   </div>
 
                   <h3 className="text-base sm:text-lg font-semibold text-gray-900 mb-2">
-                    {syllabus.title}
+                    {syllabus?.title}
                   </h3>
 
                   <p className="text-sm text-gray-600 mb-3">
                     {/* truncate description to 100 characters */}
-                    {syllabus.description.length > 100
-                      ? syllabus.description.slice(0, 100) + "..."
-                      : syllabus.description}
+                    {syllabus?.description?.length > 100
+                      ? syllabus?.description?.slice(0, 100) + "..."
+                      : syllabus?.description}
                   </p>
 
                   <p className="text-xs text-gray-500 mb-4">
-                    Course: {syllabus.courseId.name}
+                    Course: {syllabus?.courseId?.name}
                   </p>
 
                   <div className="space-y-3 mb-4">
                     <div className="flex items-center gap-2 text-sm text-gray-600">
                       <BookOpen className="h-4 w-4 text-blue-500" />
                       <span>
-                        Learning: {syllabus?.learning?.length} modules
+                        Learning: {syllabus?.learning?.length || 0} modules
                       </span>
                     </div>
                     <div className="flex items-center gap-2 text-sm text-gray-600">
                       <GraduationCap className="h-4 w-4 text-green-500" />
-                      <span>Theory: {syllabus?.theory?.length} modules</span>
+                      <span>
+                        Theory: {syllabus?.theory?.length || 0} modules
+                      </span>
                     </div>
                     <div className="flex items-center gap-2 text-sm text-gray-600">
                       <Music className="h-4 w-4 text-purple-500" />
                       <span>
-                        Technical: {syllabus?.technical?.length} modules
+                        Technical: {syllabus?.technical?.length || 0} modules
                       </span>
                     </div>
                     <div className="flex items-center gap-2 text-sm text-gray-600">
                       <GraduationCap className="h-4 w-4 text-green-500" />
-                      <span>Others: {syllabus?.others?.length} modules</span>
+                      <span>
+                        Others: {syllabus?.others?.length || 0} modules
+                      </span>
                     </div>
                   </div>
 
                   <div className="flex items-center justify-between text-sm text-gray-500">
                     <div className="flex items-center gap-1">
                       <Clock className="h-4 w-4" />
-                      {getTotalLessons(syllabus)} total lessons
+                      {getTotalLessons(syllabus) || 0} total lessons
                     </div>
                   </div>
                 </div>
@@ -264,8 +268,8 @@ const SyllabusPage = () => {
                     className="text-red-600 hover:text-red-800 text-sm font-medium"
                     onClick={() =>
                       handleDeleteSyllabus(
-                        syllabus._id || syllabus.id,
-                        syllabus.title
+                        syllabus?._id || syllabus?.id,
+                        syllabus?.title
                       )
                     }
                   >

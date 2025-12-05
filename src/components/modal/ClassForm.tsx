@@ -8,8 +8,7 @@ import { getTeachers } from "@/services/teacher";
 import { getStudents, searchStudents } from "@/services/student";
 import { createClass, updateClass } from "@/services/class";
 import { useModal } from "../modal";
-import { CourseResponse } from "@/types/course";
-import { UserResponse } from "@/types/user";
+import { useQueryClient } from "@tanstack/react-query";
 
 interface ClassFormProps {
   onSubmit?: (data: IClass) => void;
@@ -27,6 +26,7 @@ export function ClassForm({
   cancelLabel = "Cancel",
 }: ClassFormProps) {
   const { closeModal } = useModal();
+  const queryClient = useQueryClient();
   const [formData, setFormData] = useState<IClass>({
     name: initialData.name || "",
     teacherId: initialData.teacherId || "",
@@ -133,6 +133,9 @@ export function ClassForm({
         // Create new class
         await createClass(formData);
       }
+
+      // Invalidate classes query to refetch updated data
+      queryClient.invalidateQueries({ queryKey: ["classes"] });
 
       if (onSubmit) {
         onSubmit(formData);

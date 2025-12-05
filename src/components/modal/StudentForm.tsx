@@ -8,6 +8,7 @@ import AuthService, { LoginResponse } from "@/services/auth";
 import { client } from "@/services/api-client";
 import { uploadProfilePicture } from "@/services/upload";
 import { useModal } from "@/hooks/use-modal";
+import { Eye, EyeOff } from "lucide-react";
 
 interface StudentFormData {
   email: string;
@@ -16,6 +17,7 @@ interface StudentFormData {
   role: string;
   profilePicture: string | null | undefined;
   phoneNumber: string;
+  rollNumber: string;
 }
 
 interface StudentFormProps {
@@ -37,11 +39,13 @@ export function StudentForm({
     role: type, // Hidden field, always set to student
     profilePicture: null,
     phoneNumber: "",
+    rollNumber: "",
   });
 
   const { closeModal } = useModal();
   const [errors, setErrors] = useState<Partial<StudentFormData>>({});
   const [profilePreview, setProfilePreview] = useState<string>("");
+  const [showPassword, setShowPassword] = useState<boolean>(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   const validateForm = (): boolean => {
@@ -71,6 +75,13 @@ export function StudentForm({
       newErrors.phoneNumber = "Phone number is required";
     } else if (!/^\+?[\d\s-()]+$/.test(formData.phoneNumber)) {
       newErrors.phoneNumber = "Please enter a valid phone number";
+    }
+
+    // Roll number validation (required)
+    if (!formData.rollNumber.trim()) {
+      newErrors.rollNumber = "Roll number is required";
+    } else if (!/^JA\/GTR\/\d{4}$/.test(formData.rollNumber)) {
+      newErrors.rollNumber = "Roll number must be in format JA/GTR/1234";
     }
 
     setErrors(newErrors);
@@ -271,13 +282,26 @@ export function StudentForm({
         <label className="block text-sm font-medium text-gray-700 mb-1">
           Password *
         </label>
-        <Input
-          type="password"
-          value={formData.password}
-          onChange={(e) => handleInputChange("password", e.target.value)}
-          className={errors.password ? "border-red-500" : ""}
-          placeholder="Enter password"
-        />
+        <div className="relative">
+          <Input
+            type={showPassword ? "text" : "password"}
+            value={formData.password}
+            onChange={(e) => handleInputChange("password", e.target.value)}
+            className={`pr-10 ${errors.password ? "border-red-500" : ""}`}
+            placeholder="Enter password"
+          />
+          <button
+            type="button"
+            onClick={() => setShowPassword(!showPassword)}
+            className="absolute inset-y-0 right-0 pr-3 flex items-center text-gray-400 hover:text-gray-600 transition-colors"
+          >
+            {showPassword ? (
+              <EyeOff className="h-4 w-4" />
+            ) : (
+              <Eye className="h-4 w-4" />
+            )}
+          </button>
+        </div>
         {errors.password && (
           <p className="text-sm text-red-600 mt-1">{errors.password}</p>
         )}
@@ -297,6 +321,23 @@ export function StudentForm({
         />
         {errors.phoneNumber && (
           <p className="text-sm text-red-600 mt-1">{errors.phoneNumber}</p>
+        )}
+      </div>
+
+      {/* Roll Number Field */}
+      <div>
+        <label className="block text-sm font-medium text-gray-700 mb-1">
+          Roll Number *
+        </label>
+        <Input
+          type="text"
+          value={formData.rollNumber}
+          onChange={(e) => handleInputChange("rollNumber", e.target.value)}
+          className={errors.rollNumber ? "border-red-500" : ""}
+          placeholder="JA/GTR/1234"
+        />
+        {errors.rollNumber && (
+          <p className="text-sm text-red-600 mt-1">{errors.rollNumber}</p>
         )}
       </div>
 

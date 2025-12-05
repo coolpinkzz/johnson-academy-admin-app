@@ -2,7 +2,6 @@
 
 import { ClassForm, BulkAddStudentsModal, useModal } from "@/components/modal";
 import ProtectedRoute from "@/components/ProtectedRoute";
-import { useAuth } from "@/services/auth";
 import { deleteClass, getClasses } from "@/services/class";
 import { getCourses } from "@/services/course";
 import { getTeachers } from "@/services/teacher";
@@ -14,19 +13,15 @@ import {
   Plus,
   Search,
   Filter,
-  Clock,
   Users,
   BookOpen,
-  GraduationCap,
-  Music,
   User,
   Calendar,
 } from "lucide-react";
 import React from "react";
 
 const ClassesPage = () => {
-  const { user } = useAuth();
-  const { openModal, closeModal } = useModal();
+  const { openModal } = useModal();
   const queryClient = useQueryClient();
 
   // Get all classes
@@ -82,8 +77,8 @@ const ClassesPage = () => {
   };
 
   // Helper functions to get related data
-  const getCourseName = (courseId: string) => {
-    const course = coursesData?.results?.find((c) => c.id === courseId);
+  const getCourseName = (courseId: any) => {
+    const course = coursesData?.results?.find((c) => c._id === courseId.id);
     return course?.name || "Unknown Course";
   };
 
@@ -188,12 +183,12 @@ const ClassesPage = () => {
                         src={
                           typeof classItem.courseId === "string"
                             ? ""
-                            : classItem.courseId.image
+                            : classItem.courseId?.image
                         }
                         alt={
                           typeof classItem.courseId === "string"
                             ? ""
-                            : classItem.courseId.name || ""
+                            : classItem.courseId?.name || ""
                         }
                         className="h-10 w-10 text-blue-600 object-contain p-1"
                       />
@@ -201,31 +196,31 @@ const ClassesPage = () => {
                     <span className="text-xs text-gray-500 bg-gray-100 px-2 py-1 rounded">
                       {typeof classItem.courseId === "string"
                         ? ""
-                        : classItem.courseId.instrument || ""}
+                        : classItem.courseId?.instrument || ""}
                     </span>
                   </div>
 
                   <h3 className="text-base sm:text-lg font-semibold text-gray-900 mb-2">
-                    {classItem.name}
+                    {classItem?.name}
                   </h3>
 
                   <div className="space-y-3 mb-4">
                     <div className="flex items-center gap-2 text-sm text-gray-600">
                       <User className="h-4 w-4 text-blue-500" />
                       <span>
-                        Teacher: {getTeacherName(classItem.teacherId)}
+                        Teacher: {getTeacherName(classItem?.teacherId)}
                       </span>
                     </div>
                     <div className="flex items-center gap-2 text-sm text-gray-600">
                       <BookOpen className="h-4 w-4 text-green-500" />
                       <span>
-                        Course: {getCourseName(classItem.courseId as string)}
+                        Course: {getCourseName(classItem?.courseId as string)}
                       </span>
                     </div>
                     <div className="flex items-center gap-2 text-sm text-gray-600">
                       <Users className="h-4 w-4 text-purple-500" />
                       <span>
-                        Students: {getStudentCount(classItem.students)}
+                        Students: {getStudentCount(classItem?.students)}
                       </span>
                     </div>
                   </div>
