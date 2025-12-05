@@ -26,6 +26,7 @@ import { User } from "@/types/user";
 import { deleteStudent, getStudents, searchStudents } from "@/services/student";
 import { StudentForm } from "@/components/modal";
 import Image from "next/image";
+import avatarImage from "@/assets/avatar.png";
 
 const StudentsPage = () => {
   const { user } = useAuth();
@@ -293,10 +294,7 @@ const StudentsPage = () => {
                         <td className="px-6 py-4 whitespace-nowrap">
                           <div className="flex items-center">
                             <Image
-                              src={
-                                student.profilePicture ||
-                                require("@/assets/avatar.png")
-                              }
+                              src={student.profilePicture || avatarImage}
                               alt={student.name}
                               width={40}
                               height={40}
