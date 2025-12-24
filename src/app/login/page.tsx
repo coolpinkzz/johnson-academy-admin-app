@@ -6,6 +6,8 @@ import { useMutation, useQuery } from "@tanstack/react-query";
 import { useRouter } from "next/navigation";
 import React from "react";
 import { useForm } from "react-hook-form";
+import Image from "next/image";
+import logoImage from "@/assets/logo.png";
 
 interface LoginFormData {
   email: string;
@@ -61,13 +63,23 @@ const LoginPage = () => {
   };
 
   return (
-    <div className="min-h-screen w-full bg-gradient-to-br from-blue-50 to-indigo-100 flex items-center justify-center p-4">
-      <div className="max-w-md w-full space-y-8">
+    <div className="min-h-screen w-full bg-gradient-to-br from-blue-50 to-indigo-100 flex items-start justify-center p-24">
+      <div className="max-w-md w-full space-y-4">
+        {/* Logo */}
+        <div className="flex justify-center">
+          <Image
+            src={logoImage}
+            alt="Johnson Academy Logo"
+            width={200}
+            height={200}
+            className="object-contain"
+            priority
+          />
+        </div>
+
         {/* Header */}
         <div className="text-center">
-          <h1 className="text-3xl font-bold text-gray-900 mb-2">
-            Johnson Academy
-          </h1>
+          <h1 className="text-3xl font-bold text-gray-900">Johnson Academy</h1>
           <p className="text-gray-600">Admin Portal</p>
         </div>
 

@@ -1,25 +1,11 @@
 "use client";
 
 import ProtectedRoute from "@/components/ProtectedRoute";
-import {
-  DeleteConfirmation,
-  SuccessDialog,
-} from "@/components/modal/ConfirmationDialog";
+import { DeleteConfirmation } from "@/components/modal/ConfirmationDialog";
 import { useModalContext } from "@/contexts/ModalContext";
-import { client } from "@/services/api-client";
-import AuthService, { useAuth } from "@/services/auth";
 import { UserResponse } from "@/types/user";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
-import {
-  Bell,
-  Plus,
-  Search,
-  Filter,
-  Menu,
-  Trash2,
-  Edit,
-  Eye,
-} from "lucide-react";
+import { Bell, Plus, Search, Trash2, Eye } from "lucide-react";
 import React, { useState } from "react";
 import { useRouter } from "next/navigation";
 import { User } from "@/types/user";
@@ -29,7 +15,6 @@ import Image from "next/image";
 import avatarImage from "@/assets/avatar.png";
 
 const StudentsPage = () => {
-  const { user } = useAuth();
   const { openModal, closeModal } = useModalContext();
   const queryClient = useQueryClient();
   const router = useRouter();
@@ -72,6 +57,7 @@ const StudentsPage = () => {
 
   // Handle delete button click
   const handleDeleteClick = (student: User) => {
+    console.log({ student });
     openModal({
       title: "Confirm Deletion",
       content: (
@@ -116,11 +102,6 @@ const StudentsPage = () => {
       <div className="flex flex-col h-full">
         {/* Top Header */}
         <header className="flex h-16 items-center gap-2 border-b px-4 bg-white">
-          {/* Sidebar toggle (replace SidebarTrigger) */}
-          <button className="p-2 text-gray-600 hover:text-gray-900 hover:bg-gray-100 rounded-lg transition-colors">
-            <Menu className="h-5 w-5" />
-          </button>
-
           <div className="flex items-center justify-between flex-1 px-4">
             <div>
               <h1 className="text-xl font-semibold text-gray-900">Students</h1>
@@ -129,10 +110,6 @@ const StudentsPage = () => {
               </p>
             </div>
             <div className="flex items-center gap-4">
-              <button className="relative p-2 text-gray-600 hover:text-gray-900 hover:bg-gray-100 rounded-lg transition-colors">
-                <Bell className="h-5 w-5" />
-                <span className="absolute top-1 right-1 h-2 w-2 bg-red-500 rounded-full"></span>
-              </button>
               <button
                 onClick={() =>
                   openModal({
@@ -185,10 +162,6 @@ const StudentsPage = () => {
                   </button>
                 )}
               </div>
-              <button className="flex items-center gap-2 px-4 py-2 border border-gray-300 rounded-lg hover:bg-gray-50 transition-colors">
-                <Filter className="h-4 w-4" />
-                Filters
-              </button>
             </div>
             {searchQuery && (
               <div className="mt-3 text-sm text-gray-600">

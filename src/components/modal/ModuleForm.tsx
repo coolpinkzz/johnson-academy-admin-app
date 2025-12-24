@@ -28,7 +28,7 @@ export function ModuleForm({
     type: initialData.type || "theory",
     title: initialData.title || "",
     description: initialData.description || "",
-    session: initialData.session || 1,
+    session: initialData.session || 0,
     resources: initialData.resources || [],
   });
 
@@ -70,6 +70,10 @@ export function ModuleForm({
   const validateForm = (): boolean => {
     const newErrors: Record<string, string> = {};
 
+    if (!formData.syllabusId) {
+      newErrors.syllabusId = "Syllabus is required";
+    }
+
     if (!formData.title.trim()) {
       newErrors.title = "Module title is required";
     }
@@ -84,7 +88,7 @@ export function ModuleForm({
       newErrors.type = "Module type is required";
     }
 
-    if (formData.session < 1) {
+    if (formData.session <= 0) {
       newErrors.session = "Session number must be at least 1";
     }
 
@@ -115,7 +119,7 @@ export function ModuleForm({
   };
 
   const addResource = () => {
-    if (newResource.file.trim() && newResource.key.trim()) {
+    if (newResource.file.trim()) {
       setFormData((prev) => ({
         ...prev,
         resources: [...prev.resources, { ...newResource }],
@@ -273,17 +277,14 @@ export function ModuleForm({
         )}
 
         {/* Add New Resource */}
-        <div className="flex gap-2">
+        <div className="flex gap-2 items-center">
           <input
             type="text"
             value={newResource.file}
             onChange={(e) =>
-              setFormData((prev) => ({
+              setNewResource((prev) => ({
                 ...prev,
-                resources: [
-                  ...prev.resources,
-                  { file: e.target.value, key: "" },
-                ],
+                file: e.target.value,
               }))
             }
             className="flex-1 px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
@@ -293,15 +294,19 @@ export function ModuleForm({
             type="text"
             value={newResource.key}
             onChange={(e) =>
-              setNewResource((prev) => ({ ...prev, key: e.target.value }))
+              setNewResource((prev) => ({
+                ...prev,
+                key: e.target.value,
+              }))
             }
             className="flex-1 px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
-            placeholder="Resource key"
+            placeholder="Key"
           />
+
           <Button
             type="button"
             onClick={addResource}
-            disabled={!newResource.file.trim() || !newResource.key.trim()}
+            disabled={!newResource.file.trim()}
             size="sm"
             className="px-3"
           >

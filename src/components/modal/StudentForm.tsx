@@ -28,7 +28,6 @@ interface StudentFormProps {
 
 export function StudentForm({
   submitLabel = "Add Student",
-  cancelLabel = "Cancel",
   type = "student",
 }: StudentFormProps) {
   const queryClient = useQueryClient();
@@ -78,10 +77,18 @@ export function StudentForm({
     }
 
     // Roll number validation (required)
-    if (!formData.rollNumber.trim()) {
-      newErrors.rollNumber = "Roll number is required";
+    if (type === "student" && !formData.rollNumber.trim()) {
+      if (type === "student") {
+        newErrors.rollNumber = "Roll number is required";
+      }
     } else if (!/^JA\/GTR\/\d{4}$/.test(formData.rollNumber)) {
-      newErrors.rollNumber = "Roll number must be in format JA/GTR/1234";
+      if (type === "student") {
+        newErrors.rollNumber = "Roll number must be in format JA/GTR/1234";
+      }
+    }
+    // profile picture validation
+    if (!formData.profilePicture) {
+      newErrors.profilePicture = "Profile picture is required";
     }
 
     setErrors(newErrors);
@@ -229,6 +236,9 @@ export function StudentForm({
             </button>
           )}
         </div>
+        {errors.profilePicture && (
+          <p className="text-sm text-red-600 mt-1">{errors.profilePicture}</p>
+        )}
 
         <input
           ref={fileInputRef}
@@ -239,7 +249,7 @@ export function StudentForm({
         />
 
         <p className="text-sm text-gray-500 text-center">
-          Click to upload profile picture (optional)
+          Click to upload profile picture *
         </p>
       </div>
 
@@ -327,14 +337,14 @@ export function StudentForm({
       {/* Roll Number Field */}
       <div>
         <label className="block text-sm font-medium text-gray-700 mb-1">
-          Roll Number *
+          {type === "student" ? "Student Roll Number" : "Employee ID"}
         </label>
         <Input
           type="text"
           value={formData.rollNumber}
           onChange={(e) => handleInputChange("rollNumber", e.target.value)}
           className={errors.rollNumber ? "border-red-500" : ""}
-          placeholder="JA/GTR/1234"
+          placeholder={type === "student" ? "JA/GTR/1234" : "Enter employee ID"}
         />
         {errors.rollNumber && (
           <p className="text-sm text-red-600 mt-1">{errors.rollNumber}</p>

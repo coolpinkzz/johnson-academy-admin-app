@@ -149,6 +149,7 @@ export function ClassForm({
   };
 
   const handleInputChange = (field: keyof IClass, value: any) => {
+    console.log(field, value);
     setFormData((prev) => ({
       ...prev,
       [field]: value,
@@ -268,8 +269,8 @@ export function ClassForm({
             {isLoadingTeachers ? "Loading teachers..." : "Select a teacher"}
           </option>
           {teachers.map((teacher) => (
-            <option key={teacher.id} value={teacher.id}>
-              {teacher.name}
+            <option key={teacher?._id} value={teacher?._id}>
+              {teacher?.name}
             </option>
           ))}
         </select>
@@ -295,8 +296,8 @@ export function ClassForm({
             {isLoadingCourses ? "Loading courses..." : "Select a course"}
           </option>
           {courses.map((course) => (
-            <option key={course._id} value={course._id}>
-              {course.name}
+            <option key={course?._id} value={course?._id}>
+              {course?.name}
             </option>
           ))}
         </select>
@@ -344,16 +345,16 @@ export function ClassForm({
             <div className="space-y-2">
               {filteredStudents.map((student) => (
                 <label
-                  key={student.id}
+                  key={student?.id}
                   className="flex items-center space-x-2 cursor-pointer hover:bg-gray-50 p-1 rounded"
                 >
                   <input
                     type="checkbox"
-                    checked={formData.students.includes(student.id)}
+                    checked={formData.students.includes(student?.id)}
                     onChange={() => handleStudentToggle(student.id)}
                     className="rounded border-gray-300 text-blue-600 focus:ring-blue-500"
                   />
-                  <span className="text-sm text-gray-700">{student.name}</span>
+                  <span className="text-sm text-gray-700">{student?.name}</span>
                 </label>
               ))}
             </div>

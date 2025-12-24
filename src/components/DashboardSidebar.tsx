@@ -23,6 +23,8 @@ import {
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useState } from "react";
+import Image from "next/image";
+import logoImage from "@/assets/logo.png";
 
 interface SidebarItem {
   title: string;
@@ -190,14 +192,6 @@ export default function DashboardSidebar() {
 
   return (
     <>
-      {/* Mobile Menu Button */}
-      <button
-        className="md:hidden p-2 m-2 rounded-md hover:bg-gray-100"
-        onClick={() => setIsOpen(true)}
-      >
-        <Menu className="h-5 w-5" />
-      </button>
-
       {/* Mobile Sidebar Overlay */}
       {isOpen && (
         <div
@@ -212,7 +206,12 @@ export default function DashboardSidebar() {
           ${isOpen ? "translate-x-0" : "-translate-x-full"}`}
       >
         <div className="flex h-14 items-center border-b px-4">
-          <h2 className="text-lg font-semibold">Johnson Academy</h2>
+          <Image
+            src={logoImage}
+            alt="Johnson Academy Logo"
+            width={100}
+            height={100}
+          />
         </div>
         <div className="flex-1 overflow-auto px-2 py-4">
           {renderMenuItems()}
@@ -227,7 +226,17 @@ export default function DashboardSidebar() {
       >
         <div className="flex h-16 items-center border-b px-4 justify-between">
           {!collapsed && (
-            <h2 className="text-lg font-semibold">Johnson Academy</h2>
+            <div className="flex items-center">
+              <Image
+                src={logoImage}
+                alt="Johnson Academy Logo"
+                width={50}
+                height={50}
+                className="object-contain"
+                priority
+              />
+              <h2 className="text-sm font-medium">Johnson Academy</h2>
+            </div>
           )}
           <button
             onClick={() => setCollapsed(!collapsed)}

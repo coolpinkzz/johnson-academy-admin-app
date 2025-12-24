@@ -37,11 +37,6 @@ const TeacherPage = () => {
       <div className="flex flex-col h-full">
         {/* Top Header */}
         <header className="flex h-16 items-center gap-2 border-b px-4 bg-white">
-          {/* Sidebar toggle (replace SidebarTrigger) */}
-          <button className="p-2 text-gray-600 hover:text-gray-900 hover:bg-gray-100 rounded-lg transition-colors">
-            <Menu className="h-5 w-5" />
-          </button>
-
           <div className="flex items-center justify-between flex-1 px-4">
             <div>
               <h1 className="text-xl font-semibold text-gray-900">Teachers</h1>
@@ -78,10 +73,6 @@ const TeacherPage = () => {
                   className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
                 />
               </div>
-              <button className="flex items-center gap-2 px-4 py-2 border border-gray-300 rounded-lg hover:bg-gray-50 transition-colors">
-                <Filter className="h-4 w-4" />
-                Filters
-              </button>
             </div>
           </div>
 
@@ -107,7 +98,7 @@ const TeacherPage = () => {
                 </thead>
                 <tbody className="bg-white divide-y divide-gray-200">
                   {teachers?.results.map((teacher) => (
-                    <tr key={teacher.id} className="hover:bg-gray-50">
+                    <tr key={teacher?._id} className="hover:bg-gray-50">
                       <td className="px-6 py-4 whitespace-nowrap">
                         <div className="flex items-center">
                           <div className="h-10 w-10 rounded-full bg-blue-600 flex items-center justify-center text-white text-sm font-medium">

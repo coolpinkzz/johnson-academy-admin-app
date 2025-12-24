@@ -18,7 +18,7 @@ import {
   User,
   Calendar,
 } from "lucide-react";
-import React from "react";
+import React, { useCallback } from "react";
 
 const ClassesPage = () => {
   const { openModal } = useModal();
@@ -43,11 +43,6 @@ const ClassesPage = () => {
   const { data: teachersData } = useQuery({
     queryKey: ["teachers"],
     queryFn: () => getTeachers(),
-  });
-
-  const { data: studentsData } = useQuery({
-    queryKey: ["students"],
-    queryFn: () => getStudents(),
   });
 
   const handleClassForm = () => {
@@ -78,27 +73,20 @@ const ClassesPage = () => {
 
   // Helper functions to get related data
   const getCourseName = (courseId: any) => {
-    const course = coursesData?.results?.find((c) => c._id === courseId.id);
+    const course = coursesData?.results?.find((c) => c._id === courseId?.id);
     return course?.name || "Unknown Course";
   };
 
-  const getTeacherName = (teacherId: string) => {
-    const teacher = teachersData?.results?.find((t) => t.id === teacherId);
-    return teacher?.name || "Unknown Teacher";
-  };
+  const getTeacherName = useCallback(
+    (teacherId: string) => {
+      const teacher = teachersData?.results?.find((t) => t?._id === teacherId);
+      return teacher?.name || "Unknown Teacher";
+    },
+    [teachersData]
+  );
 
   const getStudentCount = (studentIds: string[]) => {
     return studentIds.length;
-  };
-
-  const getStudentNames = (studentIds: string[]) => {
-    const names = studentIds
-      .map((id) => {
-        const student = studentsData?.results?.find((s) => s.id === id);
-        return student?.name;
-      })
-      .filter(Boolean);
-    return names.slice(0, 3).join(", ") + (names.length > 3 ? "..." : "");
   };
 
   if (isLoading) {
@@ -135,10 +123,6 @@ const ClassesPage = () => {
             </p>
           </div>
           <div className="flex items-center gap-2 sm:gap-4">
-            <button className="relative p-2 text-gray-600 hover:text-gray-900 hover:bg-gray-100 rounded-lg transition-colors">
-              <Bell className="h-5 w-5" />
-              <span className="absolute top-1 right-1 h-2 w-2 bg-red-500 rounded-full"></span>
-            </button>
             <button
               className="bg-blue-600 text-white px-3 sm:px-4 py-2 rounded-lg hover:bg-blue-700 transition-colors flex items-center gap-2 text-sm sm:text-base"
               onClick={handleClassForm}
@@ -162,10 +146,6 @@ const ClassesPage = () => {
                   className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent text-sm sm:text-base"
                 />
               </div>
-              <button className="flex items-center justify-center gap-2 px-3 sm:px-4 py-2 border border-gray-300 rounded-lg hover:bg-gray-50 transition-colors text-sm sm:text-base">
-                <Filter className="h-4 w-4" />
-                <span>Filters</span>
-              </button>
             </div>
           </div>
 
@@ -178,7 +158,7 @@ const ClassesPage = () => {
               >
                 <div className="p-4 sm:p-6 flex-1">
                   <div className="flex items-center justify-between mb-4">
-                    <div className="w-10 h-10 rounded-full bg-blue-100 flex items-center justify-center">
+                    <div className="w-20 h-20 rounded-full bg-blue-100 flex items-center justify-center">
                       <img
                         src={
                           typeof classItem.courseId === "string"
@@ -190,7 +170,7 @@ const ClassesPage = () => {
                             ? ""
                             : classItem.courseId?.name || ""
                         }
-                        className="h-10 w-10 text-blue-600 object-contain p-1"
+                        className="h-20 w-20 text-blue-600 object-contain p-1"
                       />
                     </div>
                     <span className="text-xs text-gray-500 bg-gray-100 px-2 py-1 rounded">
@@ -222,28 +202,6 @@ const ClassesPage = () => {
                       <span>
                         Students: {getStudentCount(classItem?.students)}
                       </span>
-                    </div>
-                  </div>
-
-                  {classItem.students.length > 0 && (
-                    <div className="mb-4">
-                      <p className="text-xs text-gray-500 mb-1">
-                        Enrolled Students:
-                      </p>
-                      <p className="text-sm text-gray-700">
-                        {getStudentNames(classItem.students)}
-                      </p>
-                    </div>
-                  )}
-
-                  <div className="flex items-center justify-between text-sm text-gray-500">
-                    <div className="flex items-center gap-1">
-                      <Calendar className="h-4 w-4" />
-                      Created
-                    </div>
-                    <div className="flex items-center gap-1">
-                      <Users className="h-4 w-4" />
-                      {getStudentCount(classItem.students)} enrolled
                     </div>
                   </div>
                 </div>

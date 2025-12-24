@@ -20,7 +20,7 @@ export const getStudents = async (): Promise<UserResponse> => {
 
 export const searchStudents = async (query: string): Promise<UserResponse> => {
   const response: ServerResponse<UserResponse> = await client(
-    `/users?role=student&rollNumber=${encodeURIComponent(query)}`,
+    `/users?role=student&name=${encodeURIComponent(query)}`,
     {
       method: "GET",
       headers: {

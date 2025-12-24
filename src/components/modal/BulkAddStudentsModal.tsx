@@ -6,7 +6,7 @@ import { bulkAddStudents } from "@/services/class";
 import { searchStudents } from "@/services/student";
 import { useModal } from "../modal";
 import { UserResponse } from "@/types/user";
-import { useMutation, useQueryClient } from "@tanstack/react-query";
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 
 interface BulkAddStudentsModalProps {
   classId: string;
@@ -45,24 +45,26 @@ export function BulkAddStudentsModal({
   });
 
   // Fetch available students (excluding already enrolled ones)
-  useEffect(() => {
-    const fetchAvailableStudents = async () => {
-      try {
-        const response = await searchStudents("");
-        const allStudents = response.results || [];
-        // Filter out students already enrolled in this class
-        const available = allStudents.filter(
-          (student) => !existingStudentIds.includes(student.id)
-        );
-        setAvailableStudents(available);
-      } catch (error) {
-        console.error("Error fetching available students:", error);
-        setAvailableStudents([]);
-      }
-    };
+  const { data: studentsData } = useQuery({
+    queryKey: ["available-students", existingStudentIds],
+    retry: false,
+    queryFn: () => searchStudents(""),
+    enabled: !!searchQuery,
+    select: (data) => {
+      const allStudents = data.results || [];
+      // Filter out students already enrolled in this class
+      return allStudents.filter(
+        (student) => !existingStudentIds.includes(student._id)
+      );
+    },
+  });
 
-    fetchAvailableStudents();
-  }, [existingStudentIds]);
+  // Update availableStudents state when query data changes
+  useEffect(() => {
+    if (studentsData) {
+      setAvailableStudents(studentsData);
+    }
+  }, [studentsData]);
 
   const handleStudentToggle = (studentId: string) => {
     setSelectedStudentIds((prev) =>
@@ -80,7 +82,7 @@ export function BulkAddStudentsModal({
       const response = await searchStudents("");
       const allStudents = response.results || [];
       const available = allStudents.filter(
-        (student) => !existingStudentIds.includes(student.id)
+        (student) => !existingStudentIds.includes(student._id)
       );
       setAvailableStudents(available);
       return;
@@ -94,7 +96,7 @@ export function BulkAddStudentsModal({
       const searchResults = response.results || [];
       // Filter out students already enrolled in this class
       const available = searchResults.filter(
-        (student) => !existingStudentIds.includes(student.id)
+        (student) => !existingStudentIds.includes(student._id)
       );
       setAvailableStudents(available);
     } catch (error) {
