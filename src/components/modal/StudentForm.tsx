@@ -81,10 +81,6 @@ export function StudentForm({
       if (type === "student") {
         newErrors.rollNumber = "Roll number is required";
       }
-    } else if (!/^JA\/GTR\/\d{4}$/.test(formData.rollNumber)) {
-      if (type === "student") {
-        newErrors.rollNumber = "Roll number must be in format JA/GTR/1234";
-      }
     }
     // profile picture validation
     if (!formData.profilePicture) {
@@ -125,7 +121,7 @@ export function StudentForm({
         const response = await uploadProfilePicture(
           fileInputRef.current?.files?.[0] as File,
           type === "student" ? "students" : "teachers",
-          type === "student" ? "student,profile" : "teacher,profile"
+          type === "student" ? "student,profile" : "teacher,profile",
         );
         if (response.data.url) {
           profileUrl = response.data.url;
@@ -149,7 +145,7 @@ export function StudentForm({
   };
 
   const handleProfilePictureChange = (
-    e: React.ChangeEvent<HTMLInputElement>
+    e: React.ChangeEvent<HTMLInputElement>,
   ) => {
     const file = e.target.files?.[0];
     if (file) {
