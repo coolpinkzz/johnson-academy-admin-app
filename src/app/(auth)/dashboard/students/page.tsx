@@ -6,13 +6,18 @@ import { useModalContext } from "@/contexts/ModalContext";
 import { UserResponse } from "@/types/user";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { Bell, Plus, Search, Trash2, Eye } from "lucide-react";
-import React, { useState } from "react";
+import React, { useState, useEffect, useRef } from "react";
 import { useRouter } from "next/navigation";
 import { User } from "@/types/user";
-import { deleteStudent, getStudents, searchStudents } from "@/services/student";
+import {
+  deleteStudent,
+  searchStudents,
+  useStudentsInfiniteQuery,
+} from "@/services/student";
 import { StudentForm } from "@/components/modal";
 import Image from "next/image";
 import avatarImage from "@/assets/avatar.png";
+import { PAGE_SIZE } from "@/constant";
 
 const StudentsPage = () => {
   const { openModal, closeModal } = useModalContext();
@@ -20,32 +25,69 @@ const StudentsPage = () => {
   const router = useRouter();
   const [isDeleting, setIsDeleting] = useState<string | null>(null);
   const [searchQuery, setSearchQuery] = useState<string>("");
+  const loadMoreRef = useRef<HTMLDivElement>(null);
 
-  // get students
+  // Paginated list (when not searching)
   const {
-    data: students,
-    isLoading,
-    error,
-  } = useQuery<UserResponse>({
-    queryKey: ["students", searchQuery],
-    queryFn: () => {
-      if (searchQuery.trim()) {
-        return searchStudents(searchQuery.trim());
-      }
-      return getStudents();
-    },
+    data: infiniteData,
+    isLoading: isLoadingList,
+    error: listError,
+    fetchNextPage,
+    hasNextPage,
+    isFetchingNextPage,
+  } = useStudentsInfiniteQuery({
+    enabled: !searchQuery.trim(),
+    pageSize: PAGE_SIZE,
   });
+
+  // Search (when search query is set)
+  const {
+    data: searchData,
+    isLoading: isSearching,
+    error: searchError,
+  } = useQuery<UserResponse>({
+    queryKey: ["students", "search", searchQuery],
+    queryFn: () => searchStudents(searchQuery.trim()),
+    enabled: searchQuery.trim().length > 0,
+  });
+
+  const isSearchMode = searchQuery.trim().length > 0;
+  const students: UserResponse | undefined = isSearchMode
+    ? searchData
+    : infiniteData
+      ? {
+          results: infiniteData.pages.flatMap((p) => p.results),
+          page: infiniteData.pages[infiniteData.pages.length - 1]?.page ?? 1,
+          limit: PAGE_SIZE,
+          totalPages: infiniteData.pages[0]?.totalPages ?? 0,
+          totalResults: infiniteData.pages[0]?.totalResults ?? 0,
+        }
+      : undefined;
+  const isLoading = isSearchMode ? isSearching : isLoadingList;
+  const error = isSearchMode ? searchError : listError;
+
+  // Infinite scroll: fetch next page when sentinel is in view
+  useEffect(() => {
+    if (isSearchMode || !hasNextPage || isFetchingNextPage) return;
+    const el = loadMoreRef.current;
+    if (!el) return;
+    const observer = new IntersectionObserver(
+      (entries) => {
+        if (entries[0]?.isIntersecting) fetchNextPage();
+      },
+      { rootMargin: "100px", threshold: 0.1 },
+    );
+    observer.observe(el);
+    return () => observer.disconnect();
+  }, [isSearchMode, hasNextPage, isFetchingNextPage, fetchNextPage]);
 
   // Delete user function
   const deleteUser = async (userId: string) => {
     try {
       setIsDeleting(userId);
-
       await deleteStudent(userId);
-
       // Close the confirmation modal
       closeModal();
-
       // Invalidate and refetch students data
       queryClient.invalidateQueries({ queryKey: ["students"] });
     } catch (error) {
@@ -135,7 +177,7 @@ const StudentsPage = () => {
                 <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400" />
                 <input
                   type="text"
-                  placeholder="Search by roll number..."
+                  placeholder="Search by name..."
                   value={searchQuery}
                   onChange={handleSearchChange}
                   className="w-full pl-10 pr-10 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
@@ -330,6 +372,26 @@ const StudentsPage = () => {
                   </tbody>
                 </table>
               )}
+              {/* Sentinel for infinite scroll (only when not searching and there are results) */}
+              {!isSearchMode &&
+                students?.results &&
+                students.results.length > 0 && (
+                  <div ref={loadMoreRef} className="flex justify-center py-4">
+                    {isFetchingNextPage && (
+                      <div className="flex items-center gap-2 text-gray-500">
+                        <div className="w-5 h-5 border-2 border-blue-200 border-t-blue-600 rounded-full animate-spin" />
+                        <span className="text-sm">
+                          Loading more students...
+                        </span>
+                      </div>
+                    )}
+                    {!hasNextPage && students.results.length > 0 && (
+                      <p className="text-sm text-gray-500">
+                        All {students.totalResults} students loaded
+                      </p>
+                    )}
+                  </div>
+                )}
             </div>
           </div>
         </main>
