@@ -18,6 +18,7 @@ import { StudentForm } from "@/components/modal";
 import Image from "next/image";
 import avatarImage from "@/assets/avatar.png";
 import { PAGE_SIZE } from "@/constant";
+import { toast } from "react-toastify";
 
 const StudentsPage = () => {
   const { openModal, closeModal } = useModalContext();
@@ -86,12 +87,12 @@ const StudentsPage = () => {
     try {
       setIsDeleting(userId);
       await deleteStudent(userId);
-      // Close the confirmation modal
       closeModal();
-      // Invalidate and refetch students data
       queryClient.invalidateQueries({ queryKey: ["students"] });
+      toast.success("Student deleted successfully");
     } catch (error) {
       console.error("Error deleting user:", error);
+      toast.error("Failed to delete student. Please try again.");
     } finally {
       setIsDeleting(null);
     }

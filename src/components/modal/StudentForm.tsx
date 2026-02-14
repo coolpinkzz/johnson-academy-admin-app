@@ -9,6 +9,8 @@ import { client } from "@/services/api-client";
 import { uploadProfilePicture } from "@/services/upload";
 import { useModal } from "@/hooks/use-modal";
 import { Eye, EyeOff } from "lucide-react";
+import { toast } from "react-toastify";
+import { AxiosError } from "axios";
 
 interface StudentFormData {
   email: string;
@@ -105,9 +107,18 @@ export function StudentForm({
       queryClient.invalidateQueries({
         queryKey: type === "student" ? ["students"] : ["teachers"],
       });
+      toast.success(
+        type === "student"
+          ? "Student added successfully"
+          : "Teacher added successfully",
+      );
     },
     onError: (error) => {
-      console.error("Error registering user:", error);
+      const errorResponse = error as AxiosError<{ message: string }>;
+      toast.error(
+        errorResponse.response?.data.message ||
+          "Failed to add. Please try again.",
+      );
     },
   });
 
