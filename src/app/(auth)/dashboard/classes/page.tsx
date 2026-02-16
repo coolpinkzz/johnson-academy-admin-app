@@ -1,6 +1,11 @@
 "use client";
 
-import { ClassForm, BulkAddStudentsModal, useModal } from "@/components/modal";
+import {
+  ClassForm,
+  BulkAddStudentsModal,
+  useModal,
+  DeleteConfirmation,
+} from "@/components/modal";
 import ProtectedRoute from "@/components/ProtectedRoute";
 import { deleteClass, getClasses } from "@/services/class";
 import { getCourses } from "@/services/course";
@@ -21,7 +26,7 @@ import {
 import React, { useCallback } from "react";
 
 const ClassesPage = () => {
-  const { openModal } = useModal();
+  const { openModal, closeModal } = useModal();
   const queryClient = useQueryClient();
 
   // Get all classes
@@ -66,9 +71,25 @@ const ClassesPage = () => {
     });
   };
 
-  const handleDeleteClass = (classId: string) => {
-    deleteClass(classId);
-    queryClient.invalidateQueries({ queryKey: ["classes"] });
+  const handleDeleteClass = (classId: string, className: string) => {
+    openModal({
+      title: "Confirm Deletion",
+      content: (
+        <DeleteConfirmation
+          itemName={className}
+          onConfirm={async () => {
+            await deleteClass(classId);
+            closeModal("");
+            queryClient.invalidateQueries({ queryKey: ["classes"] });
+          }}
+          onCancel={() => closeModal("")}
+        />
+      ),
+      size: "md",
+      showCloseButton: false,
+      closeOnOverlayClick: true,
+      closeOnEscape: false,
+    });
   };
 
   // Helper functions to get related data
@@ -217,7 +238,9 @@ const ClassesPage = () => {
                     Edit
                   </button> */}
                   <button
-                    onClick={() => handleDeleteClass(classItem.id || "")}
+                    onClick={() =>
+                      handleDeleteClass(classItem.id || "", classItem.name)
+                    }
                     className="text-red-600 hover:text-red-800 text-sm font-medium"
                   >
                     Delete

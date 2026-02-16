@@ -1,6 +1,6 @@
 "use client";
 
-import { CourseForm, useModal } from "@/components/modal";
+import { CourseForm, useModal, DeleteConfirmation } from "@/components/modal";
 import ProtectedRoute from "@/components/ProtectedRoute";
 import { useAuth } from "@/services/auth";
 import { deleteCourse, getCourses } from "@/services/course";
@@ -40,9 +40,25 @@ const CoursesPage = () => {
     });
   };
 
-  const handleDeleteCourse = (courseId: string) => {
-    deleteCourse(courseId);
-    queryClient.invalidateQueries({ queryKey: ["courses"] });
+  const handleDeleteCourse = (courseId: string, courseName: string) => {
+    openModal({
+      title: "Confirm Deletion",
+      content: (
+        <DeleteConfirmation
+          itemName={courseName}
+          onConfirm={async () => {
+            await deleteCourse(courseId);
+            closeModal("");
+            queryClient.invalidateQueries({ queryKey: ["courses"] });
+          }}
+          onCancel={() => closeModal("")}
+        />
+      ),
+      size: "md",
+      showCloseButton: false,
+      closeOnOverlayClick: true,
+      closeOnEscape: false,
+    });
   };
 
   return (
@@ -171,7 +187,9 @@ const CoursesPage = () => {
                     Edit
                   </button> */}
                   <button
-                    onClick={() => handleDeleteCourse(course._id || "")}
+                    onClick={() =>
+                      handleDeleteCourse(course._id || "", course.name)
+                    }
                     className="text-red-600 hover:text-red-800 text-sm font-medium"
                   >
                     Delete

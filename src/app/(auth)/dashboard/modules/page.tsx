@@ -2,7 +2,7 @@
 
 import { Plus, BookOpen, Users, Clock } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import { useModal } from "@/components/modal";
+import { useModal, DeleteConfirmation } from "@/components/modal";
 import { ModuleForm } from "@/components/modal";
 import { IModule } from "@/types/module";
 import { createModule, deleteModule, getModules } from "@/services/modules";
@@ -14,7 +14,7 @@ import {
 import { useEffect, useRef } from "react";
 
 const ModulesPage = () => {
-  const { openModal } = useModal();
+  const { openModal, closeModal } = useModal();
   const containerRef = useRef<HTMLDivElement>(null); // for infinite scroll reference
   const queryClient = useQueryClient();
   const {
@@ -117,9 +117,25 @@ const ModulesPage = () => {
     }
   };
 
-  const handleDeleteModule = async (id: string) => {
-    await deleteModule(id);
-    queryClient.invalidateQueries({ queryKey: ["modules"] });
+  const handleDeleteModule = (id: string, title: string) => {
+    openModal({
+      title: "Confirm Deletion",
+      content: (
+        <DeleteConfirmation
+          itemName={title}
+          onConfirm={async () => {
+            await deleteModule(id);
+            closeModal("");
+            queryClient.invalidateQueries({ queryKey: ["modules"] });
+          }}
+          onCancel={() => closeModal("")}
+        />
+      ),
+      size: "md",
+      showCloseButton: false,
+      closeOnOverlayClick: true,
+      closeOnEscape: false,
+    });
   };
 
   return (
@@ -269,7 +285,9 @@ const ModulesPage = () => {
                           variant="outline"
                           size="sm"
                           className="text-red-600 hover:text-red-700 hover:border-red-600"
-                          onClick={() => handleDeleteModule(module.id || "")}
+                          onClick={() =>
+                            handleDeleteModule(module.id || "", module.title)
+                          }
                         >
                           Delete
                         </Button>
