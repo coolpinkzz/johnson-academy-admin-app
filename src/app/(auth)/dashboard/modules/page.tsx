@@ -5,13 +5,19 @@ import { Button } from "@/components/ui/button";
 import { useModal, DeleteConfirmation } from "@/components/modal";
 import { ModuleForm } from "@/components/modal";
 import { IModule } from "@/types/module";
-import { createModule, deleteModule, getModules } from "@/services/modules";
+import {
+  createModule,
+  deleteModule,
+  getModules,
+  updateModule,
+} from "@/services/modules";
 import {
   useInfiniteQuery,
   useQuery,
   useQueryClient,
 } from "@tanstack/react-query";
 import { useEffect, useRef } from "react";
+import { toast } from "react-toastify";
 
 const ModulesPage = () => {
   const { openModal, closeModal } = useModal();
@@ -73,12 +79,43 @@ const ModulesPage = () => {
       // Invalidate and refetch modules
       queryClient.invalidateQueries({ queryKey: ["modules"] });
 
-      // Close the modal (you might need to implement this)
-      console.log("Module created successfully!");
+      toast.success("Module created successfully");
     } catch (error) {
       console.error("Error creating module:", error);
-      // You might want to show an error toast here
+      toast.error("Failed to create module. Please try again.");
     }
+  };
+
+  const openEditModuleModal = (module: IModule) => {
+    openModal({
+      title: "Edit Module",
+      content: (
+        <ModuleForm
+          initialData={module}
+          submitLabel="Update Module"
+          onCancel={() => closeModal("")}
+          onSubmit={async (updatedData) => {
+            if (!module.id) return;
+            try {
+              await updateModule(module.id, {
+                syllabusId: updatedData.syllabusId,
+                type: updatedData.type,
+                title: updatedData.title,
+                description: updatedData.description,
+                session: updatedData.session,
+                resources: updatedData.resources,
+              });
+              queryClient.invalidateQueries({ queryKey: ["modules"] });
+              toast.success("Module updated successfully");
+            } catch (error) {
+              console.error("Error updating module:", error);
+              toast.error("Failed to update module. Please try again.");
+            }
+          }}
+        />
+      ),
+      size: "lg",
+    });
   };
 
   const openCreateModuleModal = () => {
@@ -278,9 +315,13 @@ const ModulesPage = () => {
                       </div>
 
                       <div className="flex items-center gap-2">
-                        {/* <Button variant="outline" size="sm">
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          onClick={() => openEditModuleModal(module)}
+                        >
                           Edit
-                        </Button> */}
+                        </Button>
                         <Button
                           variant="outline"
                           size="sm"

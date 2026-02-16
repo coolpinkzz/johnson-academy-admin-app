@@ -5,7 +5,7 @@ import { AuthService } from "./auth";
 
 export const getModules = async (
   page: number = 1,
-  limit: number = 10
+  limit: number = 10,
 ): Promise<any> => {
   //pagination
   const response = await client(`/modules`, {
@@ -34,6 +34,28 @@ export const getModulesByType = async (type: string): Promise<any> => {
 export const createModule = async (moduleData: any): Promise<any> => {
   const response = await client(`/modules`, {
     method: "POST",
+    headers: {
+      Authorization: `Bearer ${AuthService.getAccessToken()}`,
+    },
+    data: moduleData,
+  });
+  return response;
+};
+
+// update module
+export const updateModule = async (
+  id: string,
+  moduleData: Partial<{
+    syllabusId: string;
+    type: "theory" | "technical" | "learning" | "others";
+    title: string;
+    description: string;
+    session: number;
+    resources: { file: string; key: string }[];
+  }>,
+): Promise<any> => {
+  const response = await client(`/modules/${id}`, {
+    method: "PATCH",
     headers: {
       Authorization: `Bearer ${AuthService.getAccessToken()}`,
     },
