@@ -11,7 +11,9 @@ export const getTeachers = async (): Promise<UserResponse> => {
       headers: {
         Authorization: `Bearer ${AuthService.getAccessToken()}`,
       },
-    }
+      page: 1,
+      limit: 100,
+    },
   );
 
   return response as unknown as UserResponse;
