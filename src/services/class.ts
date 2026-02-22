@@ -10,6 +10,8 @@ export const getClasses = async (): Promise<ClassResponse> => {
       headers: {
         Authorization: `Bearer ${AuthService.getAccessToken()}`,
       },
+      page: 1,
+      limit: 100,
     });
 
     return response as unknown as ClassResponse;
@@ -28,7 +30,7 @@ export const getClassById = async (classId: string): Promise<IClass> => {
         headers: {
           Authorization: `Bearer ${AuthService.getAccessToken()}`,
         },
-      }
+      },
     );
 
     return response as unknown as IClass;
@@ -52,7 +54,7 @@ export const createClass = async (classData: IClass): Promise<IClass> => {
 
 export const updateClass = async (
   classId: string,
-  classData: Partial<IClass>
+  classData: Partial<IClass>,
 ): Promise<IClass> => {
   const response: ServerResponse<IClass> = await client(`/classes/${classId}`, {
     method: "PUT",
@@ -78,7 +80,7 @@ export const deleteClass = async (classId: string) => {
 
 export const bulkAddStudents = async (
   classId: string,
-  studentIds: string[]
+  studentIds: string[],
 ) => {
   const response = await client(`/classes/${classId}/students/bulk-add`, {
     method: "POST",

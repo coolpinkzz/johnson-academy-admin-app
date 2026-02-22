@@ -9,6 +9,8 @@ export const getCourses = async (): Promise<CourseResponse> => {
     headers: {
       Authorization: `Bearer ${AuthService.getAccessToken()}`,
     },
+    page: 1,
+    limit: 100,
   });
 
   return response as unknown as CourseResponse;

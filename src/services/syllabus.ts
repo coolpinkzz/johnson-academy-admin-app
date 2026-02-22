@@ -9,6 +9,8 @@ export const getSyllabus = async (): Promise<any> => {
     headers: {
       Authorization: `Bearer ${AuthService.getAccessToken()}`,
     },
+    page: 1,
+    limit: 100,
   });
   return response;
 };
