@@ -70,6 +70,8 @@ export function CourseForm({
   const instruments = [
     "Guitar",
     "Piano",
+    "Western Keyboard",
+    "Classical Keyboard",
     "Violin",
     "Drums",
     "Voice",
@@ -117,7 +119,7 @@ export function CourseForm({
       const response = await uploadProfilePicture(
         file,
         "courses",
-        "course-image"
+        "course-image",
       );
 
       clearInterval(progressInterval);
@@ -179,7 +181,7 @@ export function CourseForm({
 
   const handleInputChange = (
     field: keyof CourseFormData,
-    value: string | string[]
+    value: string | string[],
   ) => {
     setFormData((prev) => ({ ...prev, [field]: value }));
 
@@ -368,7 +370,7 @@ export function CourseForm({
                 <input
                   type="checkbox"
                   checked={formData.syllabus.includes(
-                    syllabus._id || syllabus.id
+                    syllabus._id || syllabus.id,
                   )}
                   onChange={() =>
                     handleSyllabusSelection(syllabus._id || syllabus.id)
