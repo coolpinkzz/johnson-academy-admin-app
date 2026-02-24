@@ -13,7 +13,8 @@ export interface IClass {
   name: string;
   teacherId: string;
   courseId: ICourse | string;
-  students: User[];
+  /** Student IDs when creating/updating; may be populated as User[] in API responses */
+  students: (string | User)[];
 }
 
 export interface ClassResponse {
