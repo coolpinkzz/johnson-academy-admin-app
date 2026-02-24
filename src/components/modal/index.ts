@@ -3,6 +3,7 @@ export { ModalContainer } from "../ModalContainer";
 export { ModalExample } from "../ModalExample";
 export { ModalProvider } from "../../contexts/ModalContext";
 export { useModal } from "../../hooks/use-modal";
+export { useClassModals } from "./useClassModals";
 export type {
   ModalData,
   ModalContextType,

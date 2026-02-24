@@ -1,33 +1,22 @@
 "use client";
 
-import {
-  ClassForm,
-  BulkAddStudentsModal,
-  useModal,
-  DeleteConfirmation,
-} from "@/components/modal";
+import { useClassModals } from "@/components/modal";
 import ProtectedRoute from "@/components/ProtectedRoute";
-import { deleteClass, getClasses } from "@/services/class";
+import { getClasses } from "@/services/class";
 import { getCourses } from "@/services/course";
 import { getTeachers } from "@/services/teacher";
-import { getStudents } from "@/services/student";
 import { ClassResponse } from "@/types/class";
-import { useQuery, useQueryClient } from "@tanstack/react-query";
-import {
-  Bell,
-  Plus,
-  Search,
-  Filter,
-  Users,
-  BookOpen,
-  User,
-  Calendar,
-} from "lucide-react";
-import React, { useCallback } from "react";
+import { useQuery } from "@tanstack/react-query";
+import { Plus, Search, Users, BookOpen, User as UserIcon } from "lucide-react";
+import { useCallback } from "react";
 
 const ClassesPage = () => {
-  const { openModal, closeModal } = useModal();
-  const queryClient = useQueryClient();
+  const {
+    handleClassForm,
+    handleBulkAddStudents,
+    handleViewStudents,
+    handleDeleteClass,
+  } = useClassModals();
 
   // Get all classes
   const {
@@ -50,48 +39,6 @@ const ClassesPage = () => {
     queryFn: () => getTeachers(),
   });
 
-  const handleClassForm = () => {
-    openModal({
-      title: "Create Class",
-      content: <ClassForm />,
-    });
-  };
-
-  const handleBulkAddStudents = (classItem: any) => {
-    console.log(classItem);
-    openModal({
-      title: "Add Students to Class",
-      content: (
-        <BulkAddStudentsModal
-          classId={classItem.id || ""}
-          className={classItem.name}
-          existingStudentIds={classItem.students || []}
-        />
-      ),
-    });
-  };
-
-  const handleDeleteClass = (classId: string, className: string) => {
-    openModal({
-      title: "Confirm Deletion",
-      content: (
-        <DeleteConfirmation
-          itemName={className}
-          onConfirm={async () => {
-            await deleteClass(classId);
-            closeModal("");
-            queryClient.invalidateQueries({ queryKey: ["classes"] });
-          }}
-          onCancel={() => closeModal("")}
-        />
-      ),
-      size: "md",
-      showCloseButton: false,
-      closeOnOverlayClick: true,
-      closeOnEscape: false,
-    });
-  };
-
   // Helper functions to get related data
   const getCourseName = (courseId: any) => {
     const course = coursesData?.results?.find((c) => c._id === courseId?.id);
@@ -103,12 +50,8 @@ const ClassesPage = () => {
       const teacher = teachersData?.results?.find((t) => t?._id === teacherId);
       return teacher?.name || "Unknown Teacher";
     },
-    [teachersData]
+    [teachersData],
   );
-
-  const getStudentCount = (studentIds: string[]) => {
-    return studentIds.length;
-  };
 
   if (isLoading) {
     return (
@@ -207,7 +150,7 @@ const ClassesPage = () => {
 
                   <div className="space-y-3 mb-4">
                     <div className="flex items-center gap-2 text-sm text-gray-600">
-                      <User className="h-4 w-4 text-blue-500" />
+                      <UserIcon className="h-4 w-4 text-blue-500" />
                       <span>
                         Teacher: {getTeacherName(classItem?.teacherId)}
                       </span>
@@ -220,14 +163,18 @@ const ClassesPage = () => {
                     </div>
                     <div className="flex items-center gap-2 text-sm text-gray-600">
                       <Users className="h-4 w-4 text-purple-500" />
-                      <span>
-                        Students: {getStudentCount(classItem?.students)}
-                      </span>
+                      <span>Students: {classItem?.students?.length}</span>
                     </div>
                   </div>
                 </div>
 
                 <div className="px-4 sm:px-6 py-3 bg-gray-50 border-t flex flex-wrap gap-4">
+                  <button
+                    onClick={() => handleViewStudents(classItem)}
+                    className="text-blue-600 hover:text-blue-800 text-sm font-medium"
+                  >
+                    View Students
+                  </button>
                   <button
                     onClick={() => handleBulkAddStudents(classItem)}
                     className="text-blue-600 hover:text-blue-800 text-sm font-medium"

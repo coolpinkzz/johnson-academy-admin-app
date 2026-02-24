@@ -1,3 +1,5 @@
+import { User } from "./user";
+
 export interface ICourse {
   id: string;
   name: string;
@@ -11,7 +13,7 @@ export interface IClass {
   name: string;
   teacherId: string;
   courseId: ICourse | string;
-  students: string[];
+  students: User[];
 }
 
 export interface ClassResponse {
