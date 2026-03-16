@@ -8,13 +8,21 @@ export interface ICourse {
   syllabus: string[];
   instrument: string;
 }
+
+export interface IStudentInClass {
+  _id: string;
+  user: User;
+  course: ICourse;
+}
+
 export interface IClass {
   id?: string;
   name: string;
-  teacherId: string;
+  teacherId: User;
   courseId: ICourse | string;
   /** Student IDs when creating/updating; may be populated as User[] in API responses */
   students: (string | User)[];
+  studentsInClass: IStudentInClass[];
 }
 
 export interface ClassResponse {
@@ -23,4 +31,9 @@ export interface ClassResponse {
   limit: number;
   totalPages: number;
   totalResults: number;
+}
+
+export interface ClassFormData {
+  name: string;
+  teacherId: string;
 }

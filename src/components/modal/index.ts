@@ -17,6 +17,7 @@ export { ModuleForm } from "./ModuleForm";
 export { SyllabusForm } from "./SyllabusForm";
 export { ClassForm } from "./ClassForm";
 export { BulkAddStudentsModal } from "./BulkAddStudentsModal";
+export { AddSingleStudentToClassModal } from "./AddSingleStudentToClassModal";
 export { default as StudentProgressModal } from "./StudentProgressModal";
 
 // Dialog Components

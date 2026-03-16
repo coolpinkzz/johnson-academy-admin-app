@@ -13,7 +13,8 @@ import { useCallback } from "react";
 const ClassesPage = () => {
   const {
     handleClassForm,
-    handleBulkAddStudents,
+    // handleBulkAddStudents,
+    handleAddStudent,
     handleViewStudents,
     handleDeleteClass,
   } = useClassModals();
@@ -117,25 +118,23 @@ const ClassesPage = () => {
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 sm:gap-6">
             {classesData?.results?.map((classItem) => (
               <div
-                key={classItem.id || classItem.name}
+                key={classItem.id}
                 className="bg-white rounded-lg shadow-sm border overflow-hidden flex flex-col"
               >
                 <div className="p-4 sm:p-6 flex-1">
                   <div className="flex items-center justify-between mb-4">
                     <div className="w-20 h-20 rounded-full bg-blue-100 flex items-center justify-center">
-                      <img
-                        src={
-                          typeof classItem.courseId === "string"
-                            ? ""
-                            : classItem.courseId?.image
-                        }
-                        alt={
-                          typeof classItem.courseId === "string"
-                            ? ""
-                            : classItem.courseId?.name || ""
-                        }
-                        className="h-20 w-20 text-blue-600 object-contain p-1"
-                      />
+                      {classItem.teacherId.profilePicture ? (
+                        <img
+                          src={classItem.teacherId.profilePicture}
+                          alt={classItem.teacherId.name}
+                          className="h-20 w-20 text-blue-600 object-cover p-1 rounded-full"
+                        />
+                      ) : (
+                        <div className="h-20 w-20 rounded-full bg-blue-600 flex items-center justify-center text-white text-2xl font-medium">
+                          {classItem.teacherId.name.charAt(0)}
+                        </div>
+                      )}
                     </div>
                     <span className="text-xs text-gray-500 bg-gray-100 px-2 py-1 rounded">
                       {typeof classItem.courseId === "string"
@@ -151,19 +150,14 @@ const ClassesPage = () => {
                   <div className="space-y-3 mb-4">
                     <div className="flex items-center gap-2 text-sm text-gray-600">
                       <UserIcon className="h-4 w-4 text-blue-500" />
-                      <span>
-                        Teacher: {getTeacherName(classItem?.teacherId)}
-                      </span>
+                      <span>Teacher: {classItem?.teacherId?.name}</span>
                     </div>
-                    <div className="flex items-center gap-2 text-sm text-gray-600">
-                      <BookOpen className="h-4 w-4 text-green-500" />
-                      <span>
-                        Course: {getCourseName(classItem?.courseId as string)}
-                      </span>
-                    </div>
+
                     <div className="flex items-center gap-2 text-sm text-gray-600">
                       <Users className="h-4 w-4 text-purple-500" />
-                      <span>Students: {classItem?.students?.length}</span>
+                      <span>
+                        Students: {classItem?.studentsInClass?.length}
+                      </span>
                     </div>
                   </div>
                 </div>
@@ -175,11 +169,17 @@ const ClassesPage = () => {
                   >
                     View Students
                   </button>
-                  <button
+                  {/* <button
                     onClick={() => handleBulkAddStudents(classItem)}
                     className="text-blue-600 hover:text-blue-800 text-sm font-medium"
                   >
                     Add Students
+                  </button> */}
+                  <button
+                    onClick={() => handleAddStudent(classItem)}
+                    className="text-blue-600 hover:text-blue-800 text-sm font-medium"
+                  >
+                    Add Student
                   </button>
                   {/* <button className="text-green-600 hover:text-green-800 text-sm font-medium">
                     Edit

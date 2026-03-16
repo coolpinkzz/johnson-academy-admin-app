@@ -1,7 +1,14 @@
-import { ClassResponse, IClass } from "@/types/class";
+import { ClassFormData, ClassResponse, IClass } from "@/types/class";
 import { AuthService } from "./auth";
 import { client } from "./api-client";
 import { ServerResponse } from "@/models/common/client";
+import {
+  QueryClient,
+  useMutation,
+  useQueryClient,
+} from "@tanstack/react-query";
+import { toast } from "react-toastify";
+import { AxiosError } from "axios";
 
 export const getClasses = async (): Promise<ClassResponse> => {
   try {
@@ -40,7 +47,9 @@ export const getClassById = async (classId: string): Promise<IClass> => {
   }
 };
 
-export const createClass = async (classData: IClass): Promise<IClass> => {
+export const createClass = async (
+  classData: ClassFormData,
+): Promise<IClass> => {
   const response: ServerResponse<IClass> = await client("/classes", {
     method: "POST",
     headers: {
@@ -94,4 +103,48 @@ export const bulkAddStudents = async (
   });
 
   return response;
+};
+
+export const addSingleStudentToClass = async (
+  classId: string,
+  studentId: string,
+  courseId: string,
+) => {
+  const response = await client(`/classes/${classId}/add-student`, {
+    method: "PATCH",
+    headers: {
+      Authorization: `Bearer ${AuthService.getAccessToken()}`,
+    },
+    data: {
+      studentId,
+      courseId,
+    },
+  });
+
+  return response;
+};
+
+// create a react query hook to add a single student to a class
+export const useAddSingleStudentToClass = () => {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: ({
+      classId,
+      studentId,
+      courseId,
+    }: {
+      classId: string;
+      studentId: string;
+      courseId: string;
+    }) => addSingleStudentToClass(classId, studentId, courseId),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["classes"] });
+      toast.success("Student added to class successfully");
+    },
+    onError: (error: AxiosError<{ message: string }>) => {
+      toast.error(
+        error?.response?.data?.message || "Error adding student to class",
+      );
+    },
+  });
 };
