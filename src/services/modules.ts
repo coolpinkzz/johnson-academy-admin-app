@@ -6,9 +6,12 @@ import { AuthService } from "./auth";
 export const getModules = async (
   page: number = 1,
   limit: number = 10,
+  syllabusId?: string,
 ): Promise<any> => {
-  //pagination
-  const response = await client(`/modules`, {
+  const endpoint = syllabusId
+    ? `/modules?syllabusId=${syllabusId}`
+    : `/modules`;
+  const response = await client(endpoint, {
     method: "GET",
     headers: {
       Authorization: `Bearer ${AuthService.getAccessToken()}`,

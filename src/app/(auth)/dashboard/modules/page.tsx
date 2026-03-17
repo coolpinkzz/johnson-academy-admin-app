@@ -11,18 +11,27 @@ import {
   getModules,
   updateModule,
 } from "@/services/modules";
+import { getSyllabus } from "@/services/syllabus";
 import {
   useInfiniteQuery,
   useQuery,
   useQueryClient,
 } from "@tanstack/react-query";
-import { useEffect, useRef } from "react";
+import { useEffect, useRef, useState } from "react";
 import { toast } from "react-toastify";
+import { SyllabusResponse } from "@/types/syllabus";
 
 const ModulesPage = () => {
   const { openModal, closeModal } = useModal();
   const containerRef = useRef<HTMLDivElement>(null); // for infinite scroll reference
   const queryClient = useQueryClient();
+  const [selectedSyllabusId, setSelectedSyllabusId] = useState<string>("all");
+
+  const { data: syllabusData } = useQuery({
+    queryKey: ["syllabus"],
+    queryFn: () => getSyllabus(),
+  });
+
   const {
     data,
     isLoading,
@@ -31,8 +40,13 @@ const ModulesPage = () => {
     hasNextPage,
     isFetchingNextPage,
   } = useInfiniteQuery({
-    queryKey: ["modules"],
-    queryFn: ({ pageParam = 1 }) => getModules(pageParam, 10),
+    queryKey: ["modules", selectedSyllabusId],
+    queryFn: ({ pageParam = 1 }) =>
+      getModules(
+        pageParam,
+        10,
+        selectedSyllabusId === "all" ? undefined : selectedSyllabusId,
+      ),
     getNextPageParam: (lastPage) => {
       if (lastPage.page < lastPage.totalPages) {
         return lastPage.page + 1;
@@ -186,13 +200,39 @@ const ModulesPage = () => {
                 Manage your course modules and learning materials
               </p>
             </div>
-            <Button
-              onClick={openCreateModuleModal}
-              className="flex items-center gap-2"
-            >
-              <Plus size={16} />
-              Create Module
-            </Button>
+            <div className="flex items-center gap-4">
+              <div className="flex flex-col gap-1">
+                <label
+                  htmlFor="syllabus-filter"
+                  className="text-sm font-medium text-gray-700"
+                >
+                  Filter by Syllabus
+                </label>
+                <select
+                  id="syllabus-filter"
+                  value={selectedSyllabusId}
+                  onChange={(e) => setSelectedSyllabusId(e.target.value)}
+                  className="min-w-[200px] px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 bg-white"
+                >
+                  <option value="all">All</option>
+                  {syllabusData?.map((syllabus: SyllabusResponse) => (
+                    <option
+                      key={syllabus._id || syllabus.id}
+                      value={syllabus._id || syllabus.id}
+                    >
+                      {syllabus.title}
+                    </option>
+                  ))}
+                </select>
+              </div>
+              <Button
+                onClick={openCreateModuleModal}
+                className="flex items-center gap-2"
+              >
+                <Plus size={16} />
+                Create Module
+              </Button>
+            </div>
           </div>
 
           {/* Stats Cards */}
