@@ -5,6 +5,7 @@ import { StudentForm } from "@/components/modal/StudentForm";
 import { useModal } from "@/hooks/use-modal";
 import { getTeachers } from "@/services/teacher";
 import { Bell, Plus, Search, Filter, Menu } from "lucide-react";
+import Image from "next/image";
 import React from "react";
 import { UserResponse } from "@/types/user";
 import { useQuery } from "@tanstack/react-query";
@@ -101,9 +102,21 @@ const TeacherPage = () => {
                     <tr key={teacher?._id} className="hover:bg-gray-50">
                       <td className="px-6 py-4 whitespace-nowrap">
                         <div className="flex items-center">
-                          <div className="h-10 w-10 rounded-full bg-blue-600 flex items-center justify-center text-white text-sm font-medium">
-                            {teacher.name.charAt(0)}
-                          </div>
+                          {teacher.profilePicture ? (
+                            <div className="h-10 w-10 rounded-full overflow-hidden shrink-0">
+                              <Image
+                                src={teacher.profilePicture}
+                                alt={teacher.name}
+                                width={40}
+                                height={40}
+                                className="h-10 w-10 object-cover"
+                              />
+                            </div>
+                          ) : (
+                            <div className="h-10 w-10 rounded-full bg-blue-600 flex items-center justify-center text-white text-sm font-medium">
+                              {teacher.name.charAt(0)}
+                            </div>
+                          )}
                           <div className="ml-4">
                             <div className="text-sm font-medium text-gray-900">
                               {teacher.name}

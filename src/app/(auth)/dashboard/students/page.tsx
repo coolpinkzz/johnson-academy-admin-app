@@ -309,13 +309,15 @@ const StudentsPage = () => {
                       <tr key={student.id} className="hover:bg-gray-50">
                         <td className="px-6 py-4 whitespace-nowrap">
                           <div className="flex items-center">
-                            <Image
-                              src={student.profilePicture || avatarImage}
-                              alt={student.name}
-                              width={40}
-                              height={40}
-                              className="rounded-full"
-                            />
+                            <div className="h-10 w-10 rounded-full overflow-hidden shrink-0">
+                              <Image
+                                src={student.profilePicture || avatarImage}
+                                alt={student.name}
+                                width={40}
+                                height={40}
+                                className="h-10 w-10 object-cover"
+                              />
+                            </div>
                             <div className="ml-4"> {student.name} </div>
                           </div>
                         </td>

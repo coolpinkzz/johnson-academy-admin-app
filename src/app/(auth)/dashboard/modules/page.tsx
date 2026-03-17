@@ -343,12 +343,15 @@ const ModulesPage = () => {
                           <div className="flex items-center gap-2 text-sm text-gray-500">
                             <span className="font-medium">Resources:</span>
                             {module.resources.map((resource, idx) => (
-                              <span
+                              <a
                                 key={idx}
-                                className="bg-gray-100 px-2 py-1 rounded text-xs"
+                                href={resource.file}
+                                target="_blank"
+                                rel="noopener noreferrer"
+                                className="bg-gray-100 px-2 py-1 rounded text-xs text-blue-600 hover:text-blue-800 hover:underline transition-colors"
                               >
-                                {resource.file}
-                              </span>
+                                {resource.key || resource.file}
+                              </a>
                             ))}
                           </div>
                         )}
