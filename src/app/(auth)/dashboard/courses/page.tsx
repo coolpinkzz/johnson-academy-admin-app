@@ -159,28 +159,6 @@ const CoursesPage = () => {
                       </span>
                     </div>
                   </div> */}
-
-                  <div className="flex items-center justify-between text-sm text-gray-500">
-                    <div className="flex items-center gap-1">
-                      <Clock className="h-4 w-4" />
-                      {/* // course.syllabus can be =[] */}
-                      {course.syllabus && course.syllabus.length > 0
-                        ? (course.syllabus[0]?.learning?.length || 0) +
-                          (course.syllabus[0]?.theory?.length || 0) +
-                          (course.syllabus[0]?.technical?.length || 0) +
-                          (course.syllabus[0]?.others?.length || 0)
-                        : 0}{" "}
-                      {course.syllabus && course.syllabus.length > 0
-                        ? "lessons"
-                        : "No lessons"}
-                    </div>
-                    <div className="flex flex-wrap items-center justify-between gap-2 text-sm text-gray-500">
-                      <div className="flex items-center gap-1">
-                        <Users className="h-4 w-4" />
-                        {course.studentCount} students
-                      </div>
-                    </div>
-                  </div>
                 </div>
                 <div className="px-4 sm:px-6 py-3 bg-gray-50 border-t flex flex-wrap gap-4">
                   {/* <button className="text-blue-600 hover:text-blue-800 text-sm font-medium">

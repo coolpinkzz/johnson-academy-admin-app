@@ -354,7 +354,7 @@ export function CourseForm({
       </div>
 
       {/* Syllabus Selection */}
-      <div>
+      {/* <div>
         <label className="block text-sm font-medium text-gray-700 mb-2">
           Select Syllabi
         </label>
@@ -386,7 +386,7 @@ export function CourseForm({
             </p>
           )}
         </div>
-      </div>
+      </div> */}
 
       {/* Form Actions */}
       <div className="flex justify-end space-x-2 pt-4">
