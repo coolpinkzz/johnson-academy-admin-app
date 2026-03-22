@@ -124,6 +124,23 @@ export const addSingleStudentToClass = async (
   return response;
 };
 
+export const removeStudentFromClass = async (
+  classId: string,
+  studentId: string,
+) => {
+  const response = await client(`/classes/${classId}/remove-student`, {
+    method: "PATCH",
+    headers: {
+      Authorization: `Bearer ${AuthService.getAccessToken()}`,
+    },
+    data: {
+      studentId,
+    },
+  });
+
+  return response;
+};
+
 // create a react query hook to add a single student to a class
 export const useAddSingleStudentToClass = () => {
   const queryClient = useQueryClient();
@@ -144,6 +161,29 @@ export const useAddSingleStudentToClass = () => {
     onError: (error: AxiosError<{ message: string }>) => {
       toast.error(
         error?.response?.data?.message || "Error adding student to class",
+      );
+    },
+  });
+};
+
+// React Query hook to remove a student from a class
+export const useRemoveStudentFromClass = () => {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: ({
+      classId,
+      studentId,
+    }: {
+      classId: string;
+      studentId: string;
+    }) => removeStudentFromClass(classId, studentId),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["classes"] });
+      toast.success("Student removed from class successfully");
+    },
+    onError: (error: AxiosError<{ message: string }>) => {
+      toast.error(
+        error?.response?.data?.message || "Error removing student from class",
       );
     },
   });
