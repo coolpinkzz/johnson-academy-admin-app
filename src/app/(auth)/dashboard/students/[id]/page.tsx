@@ -14,11 +14,18 @@ import {
   Award,
   UserCheck,
   UserX,
+  Pencil,
 } from "lucide-react";
 import { useRouter, useParams } from "next/navigation";
 import React from "react";
-import { getStudentById } from "@/services/student";
-import { StudentProgressModal, useModal } from "@/components/modal";
+import { getStudentById, updateStudentProfile } from "@/services/student";
+import {
+  StudentProgressModal,
+  useModal,
+  EditProfileForm,
+} from "@/components/modal";
+import { useQueryClient } from "@tanstack/react-query";
+import { toast } from "react-toastify";
 
 const StudentDetailPage = () => {
   const { user } = useAuth();
@@ -26,6 +33,7 @@ const StudentDetailPage = () => {
   const params = useParams();
   const studentId = params.id as string;
   const { openModal } = useModal();
+  const queryClient = useQueryClient();
 
   // Get student details
   const {
@@ -76,6 +84,26 @@ const StudentDetailPage = () => {
       closeOnOverlayClick: true,
       closeOnEscape: true,
       showCloseButton: true,
+    });
+  };
+
+  const openEditProfileModal = () => {
+    if (!student) return;
+    openModal({
+      title: "Edit Profile",
+      content: (
+        <EditProfileForm
+          student={student}
+          submitLabel="Update Profile"
+          onSubmit={async (profileData) => {
+            await updateStudentProfile(student.id, profileData);
+            queryClient.invalidateQueries({ queryKey: ["student", studentId] });
+            queryClient.invalidateQueries({ queryKey: ["students"] });
+            toast.success("Profile updated successfully");
+          }}
+        />
+      ),
+      size: "lg",
     });
   };
 
@@ -141,21 +169,30 @@ const StudentDetailPage = () => {
     <ProtectedRoute>
       <div className="flex flex-col h-full">
         {/* Header */}
-        <header className="flex items-center gap-4 p-6 border-b bg-white">
-          <button
-            onClick={() => router.back()}
-            className="p-2 text-gray-600 hover:text-gray-900 hover:bg-gray-100 rounded-lg transition-colors"
-          >
-            <ArrowLeft className="h-5 w-5" />
-          </button>
-          <div>
-            <h1 className="text-xl font-semibold text-gray-900">
-              Student Details
-            </h1>
-            <p className="text-sm text-gray-600">
-              Complete information about {student.name}
-            </p>
+        <header className="flex items-center justify-between gap-4 p-6 border-b bg-white">
+          <div className="flex items-center gap-4">
+            <button
+              onClick={() => router.back()}
+              className="p-2 text-gray-600 hover:text-gray-900 hover:bg-gray-100 rounded-lg transition-colors"
+            >
+              <ArrowLeft className="h-5 w-5" />
+            </button>
+            <div>
+              <h1 className="text-xl font-semibold text-gray-900">
+                Student Details
+              </h1>
+              <p className="text-sm text-gray-600">
+                Complete information about {student.name}
+              </p>
+            </div>
           </div>
+          <button
+            onClick={openEditProfileModal}
+            className="flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
+          >
+            <Pencil className="h-4 w-4" />
+            Edit Profile
+          </button>
         </header>
 
         {/* Main Content */}
@@ -260,23 +297,23 @@ const StudentDetailPage = () => {
                   const mergedData = mergeClassesWithProgress(student);
                   const totalCompletedModules = mergedData.reduce(
                     (sum, item) => sum + item.completedModules,
-                    0
+                    0,
                   );
                   const totalInProgressModules = mergedData.reduce(
                     (sum, item) => sum + item.inProgressModules,
-                    0
+                    0,
                   );
                   const totalUpcomingModules = mergedData.reduce(
                     (sum, item) => sum + item.upcomingModules,
-                    0
+                    0,
                   );
                   const averageProgress =
                     mergedData.length > 0
                       ? Math.round(
                           mergedData.reduce(
                             (sum, item) => sum + item.progress,
-                            0
-                          ) / mergedData.length
+                            0,
+                          ) / mergedData.length,
                         )
                       : 0;
 
@@ -344,7 +381,7 @@ const StudentDetailPage = () => {
                             onClick={() =>
                               handleProgressCardClick(
                                 classData.classId,
-                                classData.className
+                                classData.className,
                               )
                             }
                           >

@@ -102,6 +102,31 @@ export const getStudentById = async (studentId: string): Promise<User> => {
   return response as unknown as User;
 };
 
+export interface UpdateProfileData {
+  name?: string;
+  email?: string;
+  password?: string;
+  profilePicture?: string;
+  phoneNumber?: string;
+  rollNumber?: string;
+}
+
+// Update student profile
+export const updateStudentProfile = async (
+  userId: string,
+  profileData: UpdateProfileData,
+): Promise<User> => {
+  const response: ServerResponse<User> = await client(`/users/${userId}`, {
+    method: "PATCH",
+    headers: {
+      Authorization: `Bearer ${AuthService.getAccessToken()}`,
+    },
+    data: profileData,
+  });
+
+  return response as unknown as User;
+};
+
 // Get student progress for a specific class
 export const getStudentProgress = async (
   studentId: string,
