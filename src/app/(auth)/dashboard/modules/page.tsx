@@ -44,7 +44,7 @@ const ModulesPage = () => {
     queryFn: ({ pageParam = 1 }) =>
       getModules(
         pageParam,
-        10,
+        100,
         selectedSyllabusId === "all" ? undefined : selectedSyllabusId,
       ),
     getNextPageParam: (lastPage) => {
@@ -321,7 +321,7 @@ const ModulesPage = () => {
                         <div className="flex items-center gap-3 mb-2">
                           <span
                             className={`inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-xs font-medium ${getModuleTypeColor(
-                              module.type
+                              module.type,
                             )}`}
                           >
                             {getModuleTypeIcon(module.type)}
