@@ -13,7 +13,9 @@ export type {
 // Form Components
 export { StudentForm } from "./StudentForm";
 export { EditProfileForm } from "./EditProfileForm";
+export { EditTeacherForm } from "./EditTeacherForm";
 export { CourseForm } from "./CourseForm";
+export { EditCourseForm } from "./EditCourseForm";
 export { ModuleForm } from "./ModuleForm";
 export { SyllabusForm } from "./SyllabusForm";
 export { ClassForm } from "./ClassForm";

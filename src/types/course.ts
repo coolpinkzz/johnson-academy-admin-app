@@ -477,3 +477,10 @@ export interface Course {
   studentCount: number;
   id: string;
 }
+
+export interface UpdateCoursePayload {
+  name: string;
+  description: string;
+  instrument: string;
+  image: string;
+}

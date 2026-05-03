@@ -1,6 +1,11 @@
 "use client";
 
-import { CourseForm, useModal, DeleteConfirmation } from "@/components/modal";
+import {
+  CourseForm,
+  EditCourseForm,
+  useModal,
+  DeleteConfirmation,
+} from "@/components/modal";
 import ProtectedRoute from "@/components/ProtectedRoute";
 import { useAuth } from "@/services/auth";
 import { deleteCourse, getCourses } from "@/services/course";
@@ -37,6 +42,14 @@ const CoursesPage = () => {
     openModal({
       title: "Create Course",
       content: <CourseForm />,
+    });
+  };
+
+  const handleEditCourse = (course: CourseResponse["results"][number]) => {
+    openModal({
+      title: "Edit course",
+      content: <EditCourseForm course={course} />,
+      size: "md",
     });
   };
 
@@ -161,9 +174,13 @@ const CoursesPage = () => {
                   </div> */}
                 </div>
                 <div className="px-4 sm:px-6 py-3 bg-gray-50 border-t flex flex-wrap gap-4">
-                  {/* <button className="text-blue-600 hover:text-blue-800 text-sm font-medium">
+                  <button
+                    type="button"
+                    onClick={() => handleEditCourse(course)}
+                    className="text-blue-600 hover:text-blue-800 text-sm font-medium"
+                  >
                     Edit
-                  </button> */}
+                  </button>
                   <button
                     onClick={() =>
                       handleDeleteCourse(course._id || "", course.name)

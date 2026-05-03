@@ -10,7 +10,7 @@ export function useModal() {
     (modalData: Omit<ModalData, "id">) => {
       return openModal({
         size: "md",
-        closeOnOverlayClick: true,
+        closeOnOverlayClick: false,
         closeOnEscape: true,
         showCloseButton: true,
         ...modalData,

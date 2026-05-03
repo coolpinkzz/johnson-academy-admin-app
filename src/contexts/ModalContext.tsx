@@ -20,7 +20,7 @@ export function ModalProvider({ children }: { children: React.ReactNode }) {
       ...modalData,
       id,
       size: modalData.size || "md",
-      closeOnOverlayClick: modalData.closeOnOverlayClick ?? true,
+      closeOnOverlayClick: modalData.closeOnOverlayClick ?? false,
       closeOnEscape: modalData.closeOnEscape ?? true,
       showCloseButton: modalData.showCloseButton ?? true,
     };

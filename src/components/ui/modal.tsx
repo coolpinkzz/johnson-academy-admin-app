@@ -19,7 +19,7 @@ export function Modal({
   content,
   size = "md",
   onClose,
-  closeOnOverlayClick = true,
+  closeOnOverlayClick = false,
   showCloseButton = true,
 }: ModalProps) {
   const modalRef = useRef<HTMLDivElement>(null);

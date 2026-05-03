@@ -1,6 +1,6 @@
 import { AuthService } from "./auth";
 import { client } from "./api-client";
-import { CourseResponse } from "@/types/course";
+import { CourseResponse, UpdateCoursePayload } from "@/types/course";
 
 // get all courses
 export const getCourses = async (): Promise<CourseResponse> => {
@@ -36,4 +36,19 @@ export const deleteCourse = async (courseId: string): Promise<any> => {
       Authorization: `Bearer ${AuthService.getAccessToken()}`,
     },
   });
+};
+
+// update course
+export const updateCourse = async (
+  courseId: string,
+  payload: UpdateCoursePayload,
+): Promise<unknown> => {
+  const response = await client(`/courses/${courseId}`, {
+    method: "PATCH",
+    headers: {
+      Authorization: `Bearer ${AuthService.getAccessToken()}`,
+    },
+    data: payload,
+  });
+  return response;
 };

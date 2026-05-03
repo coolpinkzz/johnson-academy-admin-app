@@ -5,7 +5,7 @@ import { DeleteConfirmation } from "@/components/modal/ConfirmationDialog";
 import { useModalContext } from "@/contexts/ModalContext";
 import { UserResponse } from "@/types/user";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
-import { Bell, Plus, Search, Trash2, Eye } from "lucide-react";
+import { Plus, Search, Trash2, Eye, Users } from "lucide-react";
 import React, { useState, useEffect, useRef } from "react";
 import { useRouter } from "next/navigation";
 import { User } from "@/types/user";
@@ -66,6 +66,10 @@ const StudentsPage = () => {
       : undefined;
   const isLoading = isSearchMode ? isSearching : isLoadingList;
   const error = isSearchMode ? searchError : listError;
+
+  const totalStudentCount = isSearchMode
+    ? searchData?.totalResults
+    : infiniteData?.pages?.[0]?.totalResults;
 
   // Infinite scroll: fetch next page when sentinel is in view
   useEffect(() => {
@@ -171,6 +175,27 @@ const StudentsPage = () => {
 
         {/* Main Content Area */}
         <main className="flex-1 overflow-auto p-6 bg-gray-50">
+          {/* Total students */}
+          <div className="mb-6">
+            <div className="bg-white rounded-lg shadow-sm border px-5 py-4 flex flex-wrap items-center gap-4 max-w-md">
+              <div className="p-3 bg-blue-100 rounded-lg shrink-0">
+                <Users className="h-6 w-6 text-blue-600" />
+              </div>
+              <div>
+                <p className="text-sm font-medium text-gray-600">
+                  {isSearchMode ? "Matching students" : "Total students"}
+                </p>
+                <p className="text-2xl font-bold text-gray-900 tabular-nums">
+                  {typeof totalStudentCount === "number"
+                    ? totalStudentCount
+                    : isLoading
+                      ? "…"
+                      : "—"}
+                </p>
+              </div>
+            </div>
+          </div>
+
           {/* Search and Filters */}
           <div className="bg-white rounded-lg shadow-sm border p-6 mb-6">
             <div className="flex flex-col sm:flex-row gap-4">

@@ -1,17 +1,22 @@
 "use client";
 
 import ProtectedRoute from "@/components/ProtectedRoute";
+import { DeleteConfirmation } from "@/components/modal/ConfirmationDialog";
+import { EditTeacherForm } from "@/components/modal/EditTeacherForm";
 import { StudentForm } from "@/components/modal/StudentForm";
 import { useModal } from "@/hooks/use-modal";
-import { getTeachers } from "@/services/teacher";
-import { Bell, Plus, Search, Filter, Menu } from "lucide-react";
+import { deleteTeacher, getTeachers } from "@/services/teacher";
+import { Bell, Plus, Search, Edit, Trash2 } from "lucide-react";
 import Image from "next/image";
-import React from "react";
-import { UserResponse } from "@/types/user";
-import { useQuery } from "@tanstack/react-query";
+import React, { useMemo, useState } from "react";
+import { User, UserResponse } from "@/types/user";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
+import { toast } from "react-toastify";
 
 const TeacherPage = () => {
-  const { openModal } = useModal();
+  const { openModal, closeModal } = useModal();
+  const queryClient = useQueryClient();
+  const [deletingId, setDeletingId] = useState<string | null>(null);
   const {
     data: teachers,
     isLoading,
@@ -21,6 +26,15 @@ const TeacherPage = () => {
     queryFn: () => getTeachers(),
   });
 
+  const sortedTeachers = useMemo(() => {
+    const list = teachers?.results ?? [];
+    return [...list].sort((a, b) =>
+      (a.name || "").localeCompare(b.name || "", undefined, {
+        sensitivity: "base",
+      }),
+    );
+  }, [teachers?.results]);
+
   const handleAddTeacher = () => {
     openModal({
       title: "Add Teacher",
@@ -28,11 +42,61 @@ const TeacherPage = () => {
     });
   };
 
+  const handleEditTeacher = (teacher: User) => {
+    openModal({
+      title: "Edit Teacher",
+      content: (
+        <EditTeacherForm teacher={teacher} submitLabel="Update Teacher" />
+      ),
+      size: "lg",
+    });
+  };
+
+  const teacherHasClasses = (teacher: User) =>
+    Array.isArray(teacher.classes) && teacher.classes.length > 0;
+
+  const teacherUserId = (teacher: User) => teacher.id || teacher._id;
+
+  const performDeleteTeacher = async (teacher: User) => {
+    const userId = teacherUserId(teacher);
+    try {
+      setDeletingId(userId);
+      await deleteTeacher(userId);
+      closeModal();
+      queryClient.invalidateQueries({ queryKey: ["teachers"] });
+      toast.success("Teacher deleted successfully");
+    } catch {
+      toast.error("Failed to delete teacher. Please try again.");
+    } finally {
+      setDeletingId(null);
+    }
+  };
+
+  const handleDeleteTeacher = (teacher: User) => {
+    if (teacherHasClasses(teacher)) return;
+
+    openModal({
+      title: "Confirm Deletion",
+      content: (
+        <DeleteConfirmation
+          title="Delete Teacher"
+          message={`Are you sure you want to delete "${teacher.name}"? This action cannot be undone.`}
+          itemName={teacher.name}
+          onConfirm={() => performDeleteTeacher(teacher)}
+          onCancel={() => closeModal()}
+        />
+      ),
+      size: "sm",
+      closeOnOverlayClick: false,
+      closeOnEscape: false,
+      showCloseButton: false,
+    });
+  };
+
   if (isLoading) {
     return <div>Loading...</div>;
   }
 
-  console.log(teachers);
   return (
     <ProtectedRoute>
       <div className="flex flex-col h-full">
@@ -95,10 +159,13 @@ const TeacherPage = () => {
                     <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                       Courses
                     </th>
+                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                      Actions
+                    </th>
                   </tr>
                 </thead>
                 <tbody className="bg-white divide-y divide-gray-200">
-                  {teachers?.results.map((teacher) => (
+                  {sortedTeachers.map((teacher) => (
                     <tr key={teacher?._id} className="hover:bg-gray-50">
                       <td className="px-6 py-4 whitespace-nowrap">
                         <div className="flex items-center">
@@ -143,6 +210,44 @@ const TeacherPage = () => {
                       </td>
                       <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
                         {teacher.courses.length}
+                      </td>
+                      <td className="px-6 py-4 whitespace-nowrap text-sm font-medium">
+                        <div className="flex flex-wrap items-center gap-2">
+                          <button
+                            type="button"
+                            onClick={() => handleEditTeacher(teacher)}
+                            className="text-blue-600 hover:text-blue-800 flex items-center gap-1 hover:bg-blue-50 px-2 py-1 rounded transition-colors"
+                          >
+                            <Edit className="h-4 w-4" />
+                            Edit
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() => handleDeleteTeacher(teacher)}
+                            disabled={
+                              teacherHasClasses(teacher) ||
+                              deletingId === teacherUserId(teacher)
+                            }
+                            title={
+                              teacherHasClasses(teacher)
+                                ? "Assign this teacher to zero classes before they can be removed."
+                                : undefined
+                            }
+                            className="text-red-600 hover:text-red-800 flex items-center gap-1 hover:bg-red-50 px-2 py-1 rounded transition-colors disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:bg-transparent"
+                          >
+                            {deletingId === teacherUserId(teacher) ? (
+                              <>
+                                <span className="inline-block h-4 w-4 border-2 border-red-600 border-t-transparent rounded-full animate-spin shrink-0" />
+                                Deleting…
+                              </>
+                            ) : (
+                              <>
+                                <Trash2 className="h-4 w-4" />
+                                Delete
+                              </>
+                            )}
+                          </button>
+                        </div>
                       </td>
                     </tr>
                   ))}

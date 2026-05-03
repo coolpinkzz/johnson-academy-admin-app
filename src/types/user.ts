@@ -65,6 +65,7 @@ export interface User {
   courses: Course[];
   progress: Progress[];
   rollNumber?: string;
+  employeeId?: string;
   phoneNumber?: string;
   profilePicture?: string;
 }
