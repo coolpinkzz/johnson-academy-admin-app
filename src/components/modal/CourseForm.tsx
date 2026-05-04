@@ -70,7 +70,7 @@ export function CourseForm({
   const instruments = [
     "Guitar",
     "Piano",
-    "Dance",
+    "Western Dance",
     "Western Keyboard",
     "Classical Keyboard",
     "Violin",
