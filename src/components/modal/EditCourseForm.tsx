@@ -17,6 +17,7 @@ function courseId(course: Course) {
 const instruments = [
   "Guitar",
   "Piano",
+  "Dance",
   "Western Keyboard",
   "Classical Keyboard",
   "Violin",
