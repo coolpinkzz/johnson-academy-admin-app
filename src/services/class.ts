@@ -66,7 +66,7 @@ export const updateClass = async (
   classData: Partial<IClass>,
 ): Promise<IClass> => {
   const response: ServerResponse<IClass> = await client(`/classes/${classId}`, {
-    method: "PUT",
+    method: "PATCH",
     headers: {
       Authorization: `Bearer ${AuthService.getAccessToken()}`,
     },

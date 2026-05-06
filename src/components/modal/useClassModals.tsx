@@ -2,7 +2,7 @@
 
 import { useModal } from "@/hooks/use-modal";
 import { deleteClass } from "@/services/class";
-import { IClass, IStudentInClass } from "@/types/class";
+import { IClass, IStudentInClass, getClassDocumentId } from "@/types/class";
 import { User } from "@/types/user";
 import { useQueryClient } from "@tanstack/react-query";
 import React, { useCallback } from "react";
@@ -14,6 +14,7 @@ import { DeleteConfirmation } from "./ConfirmationDialog";
 
 export type ClassModalsHandlers = {
   handleClassForm: () => void;
+  handleEditClass: (classItem: IClass) => void;
   handleBulkAddStudents: (classItem: IClass) => void;
   handleAddStudent: (classItem: IClass) => void;
   handleViewStudents: (classItem: IClass) => void;
@@ -27,9 +28,24 @@ export function useClassModals(): ClassModalsHandlers {
   const handleClassForm = useCallback(() => {
     openModal({
       title: "Create Class",
-      content: <ClassForm />,
+      content: <ClassForm key="create-class" />,
     });
   }, [openModal]);
+
+  const handleEditClass = useCallback(
+    (classItem: IClass) => {
+      openModal({
+        title: "Edit Class",
+        content: (
+          <ClassForm
+            key={getClassDocumentId(classItem) ?? `edit-${classItem.name}`}
+            initialData={classItem}
+          />
+        ),
+      });
+    },
+    [openModal],
+  );
 
   const handleBulkAddStudents = useCallback(
     (classItem: IClass) => {
@@ -41,7 +57,7 @@ export function useClassModals(): ClassModalsHandlers {
         title: "Add Students to Class",
         content: (
           <BulkAddStudentsModal
-            classId={classItem.id || ""}
+            classId={getClassDocumentId(classItem) || ""}
             className={classItem.name}
             existingStudentIds={existingStudentIds}
           />
@@ -67,7 +83,7 @@ export function useClassModals(): ClassModalsHandlers {
         title: "Add Student",
         content: (
           <AddSingleStudentToClassModal
-            classId={classItem.id || ""}
+            classId={getClassDocumentId(classItem) || ""}
             className={classItem.name}
             existingStudentIds={existingStudentIds}
             defaultCourseId={defaultCourseId}
@@ -89,7 +105,7 @@ export function useClassModals(): ClassModalsHandlers {
         title: `Students - ${classItem.name}`,
         content: (
           <ViewStudentsInClassModal
-            classId={classItem.id || ""}
+            classId={getClassDocumentId(classItem) || ""}
             students={students}
           />
         ),
@@ -125,6 +141,7 @@ export function useClassModals(): ClassModalsHandlers {
 
   return {
     handleClassForm,
+    handleEditClass,
     handleBulkAddStudents,
     handleAddStudent,
     handleViewStudents,

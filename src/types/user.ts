@@ -9,7 +9,9 @@ export interface UserResponse {
 export interface Class {
   id: string;
   name: string;
-  teacherId: string;
+  teachers?: string[];
+  /** @deprecated Prefer teachers[] on class documents */
+  teacherId?: string;
   courseId: string;
   students: string[];
 }

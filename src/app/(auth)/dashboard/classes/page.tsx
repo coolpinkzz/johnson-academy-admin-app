@@ -3,9 +3,14 @@
 import { useClassModals } from "@/components/modal";
 import ProtectedRoute from "@/components/ProtectedRoute";
 import { getClasses } from "@/services/class";
-import { getCourses } from "@/services/course";
 import { getTeachers } from "@/services/teacher";
-import { ClassResponse } from "@/types/class";
+import {
+  ClassResponse,
+  getClassTeacherList,
+  classTeacherRefId,
+  getClassDocumentId,
+  type ClassTeacherRef,
+} from "@/types/class";
 import { useQuery } from "@tanstack/react-query";
 import { Plus, Search, Users, BookOpen, User as UserIcon } from "lucide-react";
 import { useCallback } from "react";
@@ -13,13 +18,13 @@ import { useCallback } from "react";
 const ClassesPage = () => {
   const {
     handleClassForm,
+    handleEditClass,
     // handleBulkAddStudents,
     handleAddStudent,
     handleViewStudents,
     handleDeleteClass,
   } = useClassModals();
 
-  // Get all classes
   const {
     data: classesData,
     isLoading,
@@ -29,30 +34,50 @@ const ClassesPage = () => {
     queryFn: () => getClasses(),
   });
 
-  // Get additional data for display
-  const { data: coursesData } = useQuery({
-    queryKey: ["courses"],
-    queryFn: () => getCourses(),
-  });
-
   const { data: teachersData } = useQuery({
     queryKey: ["teachers"],
     queryFn: () => getTeachers(),
   });
 
-  // Helper functions to get related data
-  const getCourseName = (courseId: any) => {
-    const course = coursesData?.results?.find((c) => c._id === courseId?.id);
-    return course?.name || "Unknown Course";
-  };
-
-  const getTeacherName = useCallback(
-    (teacherId: string) => {
-      const teacher = teachersData?.results?.find((t) => t?._id === teacherId);
-      return teacher?.name || "Unknown Teacher";
+  const getTeacherDisplayName = useCallback(
+    (ref: ClassTeacherRef) => {
+      if (typeof ref === "object" && ref != null && "name" in ref) {
+        return ref.name;
+      }
+      const id = classTeacherRefId(ref);
+      const teacher = teachersData?.results?.find((t) => t?._id === id);
+      return teacher?.name ?? "Teacher";
     },
     [teachersData],
   );
+
+  const formatTeacherNames = (teacherRefs: ClassTeacherRef[]) => {
+    const names = teacherRefs.map((t) => getTeacherDisplayName(t));
+    if (names.length === 0) return "No teachers";
+    return names.join(", ");
+  };
+
+  const resolveTeacherAvatar = useCallback(
+    (ref: ClassTeacherRef) => {
+      if (typeof ref === "object" && ref != null && "name" in ref) {
+        return {
+          id: classTeacherRefId(ref),
+          src: ref.profilePicture,
+          initial: ref.name?.charAt(0) ?? "?",
+        };
+      }
+      const id = classTeacherRefId(ref);
+      const teacher = teachersData?.results?.find((t) => t._id === id);
+      return {
+        id,
+        src: teacher?.profilePicture,
+        initial: teacher?.name?.charAt(0) ?? "?",
+      };
+    },
+    [teachersData],
+  );
+
+  const TEACHER_STACK_MAX = 5;
 
   if (isLoading) {
     return (
@@ -116,23 +141,66 @@ const ClassesPage = () => {
 
           {/* Classes Grid */}
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 sm:gap-6">
-            {classesData?.results?.map((classItem) => (
+            {classesData?.results?.map((classItem) => {
+              const teacherList = getClassTeacherList(classItem);
+              const teachersLabel = formatTeacherNames(teacherList);
+              const teacherAvatars = teacherList.map((t) =>
+                resolveTeacherAvatar(t),
+              );
+              const visibleAvatars = teacherAvatars.slice(0, TEACHER_STACK_MAX);
+              const overflowCount = teacherAvatars.length - TEACHER_STACK_MAX;
+
+              return (
               <div
-                key={classItem.id}
+                key={getClassDocumentId(classItem) ?? classItem.name}
                 className="bg-white rounded-lg shadow-sm border overflow-hidden flex flex-col"
               >
                 <div className="p-4 sm:p-6 flex-1">
-                  <div className="flex items-center justify-between mb-4">
-                    <div className="w-20 h-20 rounded-full bg-blue-100 flex items-center justify-center">
-                      {classItem.teacherId.profilePicture ? (
-                        <img
-                          src={classItem.teacherId.profilePicture}
-                          alt={classItem.teacherId.name}
-                          className="h-20 w-20 text-blue-600 object-cover p-1 rounded-full"
-                        />
+                  <div className="flex items-center justify-between mb-4 gap-3">
+                    <div className="flex min-w-0 flex-1 items-center">
+                      {teacherAvatars.length === 0 ? (
+                        <div
+                          className="flex h-12 w-12 shrink-0 items-center justify-center rounded-full bg-blue-100 text-lg font-medium text-blue-600"
+                          title="No teachers"
+                        >
+                          ?
+                        </div>
                       ) : (
-                        <div className="h-20 w-20 rounded-full bg-blue-600 flex items-center justify-center text-white text-2xl font-medium">
-                          {classItem.teacherId.name.charAt(0)}
+                        <div className="flex items-center pr-1">
+                          <div className="flex -space-x-2">
+                            {visibleAvatars.map((a, index) => (
+                              <div
+                                key={a.id}
+                                className="relative inline-flex h-12 w-12 shrink-0 rounded-full bg-gray-100 ring-2 ring-white"
+                                style={{
+                                  zIndex: visibleAvatars.length - index,
+                                }}
+                                title={getTeacherDisplayName(
+                                  teacherList[index]!,
+                                )}
+                              >
+                                {a.src ? (
+                                  <img
+                                    src={a.src}
+                                    alt=""
+                                    className="h-full w-full rounded-full object-cover"
+                                  />
+                                ) : (
+                                  <span className="flex h-full w-full items-center justify-center rounded-full bg-blue-600 text-sm font-medium text-white">
+                                    {a.initial}
+                                  </span>
+                                )}
+                              </div>
+                            ))}
+                            {overflowCount > 0 ? (
+                              <div
+                                className="relative z-50 flex h-12 w-12 shrink-0 items-center justify-center rounded-full bg-gray-200 text-xs font-semibold text-gray-800 ring-2 ring-white"
+                                title={`${overflowCount} more teacher${overflowCount === 1 ? "" : "s"}`}
+                              >
+                                +{overflowCount}
+                              </div>
+                            ) : null}
+                          </div>
                         </div>
                       )}
                     </div>
@@ -148,9 +216,14 @@ const ClassesPage = () => {
                   </h3>
 
                   <div className="space-y-3 mb-4">
-                    <div className="flex items-center gap-2 text-sm text-gray-600">
-                      <UserIcon className="h-4 w-4 text-blue-500" />
-                      <span>Teacher: {classItem?.teacherId?.name}</span>
+                    <div className="flex items-start gap-2 text-sm text-gray-600">
+                      <UserIcon className="h-4 w-4 text-blue-500 shrink-0 mt-0.5" />
+                      <span className="min-w-0 break-words">
+                        <span className="font-medium text-gray-700">
+                          Teachers:{" "}
+                        </span>
+                        {teachersLabel}
+                      </span>
                     </div>
 
                     <div className="flex items-center gap-2 text-sm text-gray-600">
@@ -181,12 +254,18 @@ const ClassesPage = () => {
                   >
                     Add Student
                   </button>
-                  {/* <button className="text-green-600 hover:text-green-800 text-sm font-medium">
+                  <button
+                    onClick={() => handleEditClass(classItem)}
+                    className="text-green-600 hover:text-green-800 text-sm font-medium"
+                  >
                     Edit
-                  </button> */}
+                  </button>
                   <button
                     onClick={() =>
-                      handleDeleteClass(classItem.id || "", classItem.name)
+                      handleDeleteClass(
+                        getClassDocumentId(classItem) || "",
+                        classItem.name,
+                      )
                     }
                     className="text-red-600 hover:text-red-800 text-sm font-medium"
                   >
@@ -194,7 +273,8 @@ const ClassesPage = () => {
                   </button>
                 </div>
               </div>
-            ))}
+            );
+            })}
           </div>
 
           {/* Empty State */}
