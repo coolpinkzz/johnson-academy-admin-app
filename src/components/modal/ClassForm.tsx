@@ -1,12 +1,20 @@
 "use client";
 
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useMemo } from "react";
 import { Button } from "@/components/ui/button";
-import { ClassFormData, IClass } from "@/types/class";
+import {
+  ClassFormData,
+  IClass,
+  getClassTeacherList,
+  getClassDocumentId,
+  classTeacherRefId,
+} from "@/types/class";
 import { getTeachers } from "@/services/teacher";
 import { createClass, updateClass } from "@/services/class";
 import { useModal } from "../modal";
 import { useQueryClient } from "@tanstack/react-query";
+import { User } from "@/types/user";
+import { Search } from "lucide-react";
 
 interface ClassFormProps {
   onSubmit?: (data: Partial<IClass>) => void;
@@ -16,27 +24,63 @@ interface ClassFormProps {
   cancelLabel?: string;
 }
 
+function teacherIdsFromInitial(initialData: Partial<IClass>): string[] {
+  return getClassTeacherList(initialData).map((t) => classTeacherRefId(t));
+}
+
+function TeacherAvatar({
+  name,
+  profilePicture,
+  size = "md",
+}: {
+  name: string;
+  profilePicture?: string | null;
+  size?: "sm" | "md";
+}) {
+  const box = size === "sm" ? "h-6 w-6 text-[10px]" : "h-10 w-10 text-sm";
+  const initial = name?.trim()?.charAt(0)?.toUpperCase() || "?";
+  if (profilePicture) {
+    return (
+      <img
+        src={profilePicture}
+        alt=""
+        className={`${box} shrink-0 rounded-full object-cover bg-gray-100`}
+      />
+    );
+  }
+  return (
+    <div
+      className={`${box} shrink-0 rounded-full bg-blue-600 flex items-center justify-center font-medium text-white`}
+    >
+      {initial}
+    </div>
+  );
+}
+
 export function ClassForm({
   onSubmit,
   onCancel,
   initialData = {},
-  submitLabel = "Create Class",
+  submitLabel,
   cancelLabel = "Cancel",
 }: ClassFormProps) {
   const { closeModal } = useModal();
   const queryClient = useQueryClient();
-  const [formData, setFormData] = useState<ClassFormData>({
+  const classId = getClassDocumentId(initialData);
+  const isEdit = Boolean(classId);
+
+  const [formData, setFormData] = useState<ClassFormData>(() => ({
     name: initialData.name || "",
-    teacherId: "", // check this later
-  });
+    teachers: teacherIdsFromInitial(initialData),
+  }));
 
   const [errors, setErrors] = useState<Record<string, string>>({});
   const [isSubmitting, setIsSubmitting] = useState(false);
 
-  const [teachers, setTeachers] = useState<any[]>([]);
+  const [teachers, setTeachers] = useState<User[]>([]);
   const [isLoadingTeachers, setIsLoadingTeachers] = useState(false);
+  const [teacherSearch, setTeacherSearch] = useState("");
 
-  // Fetch teachers on component mount
   useEffect(() => {
     const fetchTeachers = async () => {
       setIsLoadingTeachers(true);
@@ -50,9 +94,29 @@ export function ClassForm({
         setIsLoadingTeachers(false);
       }
     };
-
-    fetchTeachers();
+    void fetchTeachers();
   }, []);
+
+  /** Full list when search is empty; filtered by name/email when typing. */
+  const displayedTeachers = useMemo(() => {
+    const q = teacherSearch.trim().toLowerCase();
+    if (!q) {
+      return teachers;
+    }
+    return teachers.filter((t) => {
+      const name = (t.name || "").toLowerCase();
+      const email = (t.email || "").toLowerCase();
+      return name.includes(q) || email.includes(q);
+    });
+  }, [teachers, teacherSearch]);
+
+  const selectedTeacherUsers = useMemo(
+    () =>
+      formData.teachers
+        .map((id) => teachers.find((t) => t._id === id))
+        .filter((t): t is User => t != null),
+    [formData.teachers, teachers],
+  );
 
   const validateForm = (): boolean => {
     const newErrors: Record<string, string> = {};
@@ -61,8 +125,8 @@ export function ClassForm({
       newErrors.name = "Class name is required";
     }
 
-    if (!formData.teacherId) {
-      newErrors.teacherId = "Teacher is required";
+    if (!formData.teachers.length) {
+      newErrors.teachers = "Select at least one teacher";
     }
 
     setErrors(newErrors);
@@ -76,12 +140,19 @@ export function ClassForm({
     }
     setIsSubmitting(true);
     try {
-      await createClass({
+      const payload = {
         name: formData.name,
-        teacherId: formData.teacherId,
-      });
+        teachers: formData.teachers,
+      };
 
-      // Invalidate classes query to refetch updated data
+      if (isEdit && classId) {
+        await updateClass(classId, payload);
+      } else {
+        await createClass(payload);
+      }
+
+      onSubmit?.(payload);
+
       queryClient.invalidateQueries({ queryKey: ["classes"] });
 
       closeModal();
@@ -92,31 +163,28 @@ export function ClassForm({
     }
   };
 
-  const handleInputChange = (field: keyof ClassFormData, value: any) => {
-    console.log(field, value);
-    setFormData((prev) => ({
-      ...prev,
-      [field]: value,
-    }));
-
-    if (errors[field]) {
-      setErrors((prev) => ({
-        ...prev,
-        [field]: "",
-      }));
+  const toggleTeacher = (teacherId: string) => {
+    setFormData((prev) => {
+      const has = prev.teachers.includes(teacherId);
+      const teachers = has
+        ? prev.teachers.filter((id) => id !== teacherId)
+        : [...prev.teachers, teacherId];
+      return { ...prev, teachers };
+    });
+    if (errors.teachers) {
+      setErrors((prev) => ({ ...prev, teachers: "" }));
     }
   };
 
   const handleCancel = () => {
-    if (onCancel) {
-      onCancel();
-    }
+    onCancel?.();
     closeModal();
   };
 
+  const defaultSubmitLabel = isEdit ? "Update Class" : "Create Class";
+
   return (
     <form onSubmit={handleSubmit} className="space-y-6">
-      {/* Class Name */}
       <div>
         <label className="block text-sm font-medium text-gray-700 mb-1">
           Class Name *
@@ -124,7 +192,7 @@ export function ClassForm({
         <input
           type="text"
           value={formData.name}
-          onChange={(e) => handleInputChange("name", e.target.value)}
+          onChange={(e) => setFormData((p) => ({ ...p, name: e.target.value }))}
           className={`w-full px-3 py-2 border rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 ${
             errors.name ? "border-red-500" : "border-gray-300"
           }`}
@@ -135,34 +203,111 @@ export function ClassForm({
         )}
       </div>
 
-      {/* Teacher Selection */}
       <div>
         <label className="block text-sm font-medium text-gray-700 mb-1">
-          Teacher *
+          Teachers *{" "}
+          <span className="font-normal text-gray-500">(one or more)</span>
         </label>
-        <select
-          value={formData.teacherId}
-          onChange={(e) => handleInputChange("teacherId", e.target.value)}
-          className={`w-full px-3 py-2 border rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 ${
-            errors.teacherId ? "border-red-500" : "border-gray-300"
+
+        {selectedTeacherUsers.length > 0 ? (
+          <div className="mb-3">
+            <p className="text-xs font-medium text-gray-600 mb-1.5">Selected</p>
+            <div className="flex flex-wrap gap-2">
+              {selectedTeacherUsers.map((teacher) => (
+                <span
+                  key={teacher._id}
+                  className="inline-flex items-center gap-1.5 rounded-full bg-blue-50 text-blue-900 border border-blue-100 pl-1 pr-1 py-0.5 text-sm max-w-full"
+                >
+                  <TeacherAvatar
+                    name={teacher.name}
+                    profilePicture={teacher.profilePicture}
+                    size="sm"
+                  />
+                  <span className="flex min-w-0 flex-col leading-tight">
+                    <span className="max-w-[160px] truncate">
+                      {teacher.name}
+                    </span>
+                    {teacher.email ? (
+                      <span className="max-w-[160px] truncate text-[10px] text-blue-700/80 font-normal">
+                        {teacher.email}
+                      </span>
+                    ) : null}
+                  </span>
+                  <button
+                    type="button"
+                    onClick={() => toggleTeacher(teacher._id)}
+                    className="rounded-full p-0.5 hover:bg-blue-100 text-blue-700 leading-none"
+                    aria-label={`Remove ${teacher.name}`}
+                  >
+                    ×
+                  </button>
+                </span>
+              ))}
+            </div>
+          </div>
+        ) : null}
+
+        <div className="relative mb-2">
+          <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400 pointer-events-none" />
+          <input
+            type="search"
+            value={teacherSearch}
+            onChange={(e) => setTeacherSearch(e.target.value)}
+            placeholder="Search to filter teachers by name or email…"
+            className="w-full pl-9 pr-3 py-2 text-sm border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+            disabled={isLoadingTeachers}
+            autoComplete="off"
+          />
+        </div>
+
+        <div
+          className={`max-h-52 overflow-y-auto rounded-md border p-2 space-y-2 ${
+            errors.teachers ? "border-red-500" : "border-gray-300"
           }`}
-          disabled={isLoadingTeachers}
         >
-          <option value="">
-            {isLoadingTeachers ? "Loading teachers..." : "Select a teacher"}
-          </option>
-          {teachers.map((teacher) => (
-            <option key={teacher?._id} value={teacher?._id}>
-              {teacher?.name}
-            </option>
-          ))}
-        </select>
-        {errors.teacherId && (
-          <p className="text-sm text-red-600 mt-1">{errors.teacherId}</p>
+          {isLoadingTeachers ? (
+            <p className="text-sm text-gray-500 py-2">Loading teachers...</p>
+          ) : teachers.length === 0 ? (
+            <p className="text-sm text-gray-500 py-2">No teachers available</p>
+          ) : displayedTeachers.length === 0 ? (
+            <p className="text-sm text-gray-500 py-2">
+              {teacherSearch.trim()
+                ? `No teachers match "${teacherSearch.trim()}"`
+                : "No teachers available."}
+            </p>
+          ) : (
+            displayedTeachers.map((teacher) => (
+              <label
+                key={teacher._id}
+                className="flex items-center gap-3 cursor-pointer text-sm text-gray-800 py-1.5 px-1 rounded-md hover:bg-gray-50 has-[:focus-visible]:bg-gray-50"
+              >
+                <input
+                  type="checkbox"
+                  className="rounded border-gray-300 shrink-0"
+                  checked={formData.teachers.includes(teacher._id)}
+                  onChange={() => toggleTeacher(teacher._id)}
+                />
+                <TeacherAvatar
+                  name={teacher.name}
+                  profilePicture={teacher.profilePicture}
+                />
+                <span className="flex min-w-0 flex-1 flex-col gap-0.5">
+                  <span className="font-medium text-gray-900 truncate">
+                    {teacher.name}
+                  </span>
+                  <span className="text-xs text-gray-500 truncate">
+                    {teacher.email || "—"}
+                  </span>
+                </span>
+              </label>
+            ))
+          )}
+        </div>
+        {errors.teachers && (
+          <p className="text-sm text-red-600 mt-1">{errors.teachers}</p>
         )}
       </div>
 
-      {/* Form Actions */}
       <div className="flex justify-end space-x-3 pt-4">
         <Button
           type="button"
@@ -177,7 +322,7 @@ export function ClassForm({
           disabled={isSubmitting}
           className="bg-blue-600 hover:bg-blue-700"
         >
-          {isSubmitting ? "Saving..." : submitLabel}
+          {isSubmitting ? "Saving..." : (submitLabel ?? defaultSubmitLabel)}
         </Button>
       </div>
     </form>
