@@ -84,10 +84,6 @@ export function StudentForm({
         newErrors.rollNumber = "Roll number is required";
       }
     }
-    // profile picture validation
-    if (!formData.profilePicture) {
-      newErrors.profilePicture = "Profile picture is required";
-    }
 
     setErrors(newErrors);
     return Object.keys(newErrors).length === 0;
@@ -142,7 +138,10 @@ export function StudentForm({
           }));
         }
       }
-      await mutateAsync({ ...formData, profilePicture: profileUrl });
+      await mutateAsync({
+        ...formData,
+        profilePicture: profileUrl || "",
+      });
     }
   };
 
@@ -256,7 +255,7 @@ export function StudentForm({
         />
 
         <p className="text-sm text-gray-500 text-center">
-          Click to upload profile picture *
+          Click to upload a profile picture (optional)
         </p>
       </div>
 
