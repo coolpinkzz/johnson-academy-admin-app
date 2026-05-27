@@ -226,12 +226,12 @@ export default function DashboardSidebar() {
       >
         <div className="flex h-16 items-center border-b px-4 justify-between">
           {!collapsed && (
-            <div className="flex items-center">
+            <div className="flex items-center gap-2">
               <Image
                 src={logoImage}
                 alt="Johnson Academy Logo"
-                width={50}
-                height={50}
+                width={36}
+                height={36}
                 className="object-contain"
                 priority
               />

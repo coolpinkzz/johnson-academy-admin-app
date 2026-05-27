@@ -4,7 +4,7 @@ import { Plus, BookOpen, Users, Clock } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { useModal, DeleteConfirmation } from "@/components/modal";
 import { ModuleForm } from "@/components/modal";
-import { IModule } from "@/types/module";
+import { getModuleDocumentId, IModule } from "@/types/module";
 import {
   createModule,
   deleteModule,
@@ -109,14 +109,16 @@ const ModulesPage = () => {
           submitLabel="Update Module"
           onCancel={() => closeModal("")}
           onSubmit={async (updatedData) => {
-            if (!module.id) return;
+            const moduleId = getModuleDocumentId(module);
+            if (!moduleId) return;
             try {
-              await updateModule(module.id, {
+              await updateModule(moduleId, {
                 syllabusId: updatedData.syllabusId,
                 type: updatedData.type,
                 title: updatedData.title,
                 description: updatedData.description,
                 session: updatedData.session,
+                seq: updatedData.seq,
                 resources: updatedData.resources,
               });
               queryClient.invalidateQueries({ queryKey: ["modules"] });
@@ -313,7 +315,7 @@ const ModulesPage = () => {
               ) : (
                 modules.map((module: IModule, index: number) => (
                   <div
-                    key={`${module.id}-${index}`}
+                    key={`${getModuleDocumentId(module) ?? index}-${index}`}
                     className="p-6 hover:bg-gray-50 transition-colors"
                   >
                     <div className="flex items-start justify-between">
@@ -331,6 +333,11 @@ const ModulesPage = () => {
                           <span className="text-sm text-gray-500">
                             Session {module.session}
                           </span>
+                          {module.seq != null && (
+                            <span className="text-sm text-gray-500">
+                              Seq {module.seq}
+                            </span>
+                          )}
                         </div>
                         <h3 className="text-lg font-semibold text-gray-900 mb-2">
                           {module.title}
@@ -339,10 +346,10 @@ const ModulesPage = () => {
                           {module.description}
                         </p>
 
-                        {module.resources.length > 0 && (
+                        {(module.resources?.length ?? 0) > 0 && (
                           <div className="flex items-center gap-2 text-sm text-gray-500">
                             <span className="font-medium">Resources:</span>
-                            {module.resources.map((resource, idx) => (
+                            {module.resources!.map((resource, idx) => (
                               <a
                                 key={idx}
                                 href={resource.file}
@@ -370,7 +377,10 @@ const ModulesPage = () => {
                           size="sm"
                           className="text-red-600 hover:text-red-700 hover:border-red-600"
                           onClick={() =>
-                            handleDeleteModule(module.id || "", module.title)
+                            handleDeleteModule(
+                              getModuleDocumentId(module) || "",
+                              module.title,
+                            )
                           }
                         >
                           Delete

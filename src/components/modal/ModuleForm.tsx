@@ -3,7 +3,7 @@
 import React, { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { Plus, X } from "lucide-react";
-import { IModule, IModuleResource } from "@/types/module";
+import { IModule, IModuleResource, ModuleType } from "@/types/module";
 import { getSyllabus } from "@/services/syllabus";
 import { useModal } from "../modal";
 
@@ -29,6 +29,7 @@ export function ModuleForm({
     title: initialData.title || "",
     description: initialData.description || "",
     session: initialData.session || 0,
+    seq: initialData.seq,
     resources: initialData.resources || [],
   });
 
@@ -119,10 +120,10 @@ export function ModuleForm({
   };
 
   const addResource = () => {
-    if (newResource.file.trim()) {
+    if ((newResource.file ?? "").trim()) {
       setFormData((prev) => ({
         ...prev,
-        resources: [...prev.resources, { ...newResource }],
+        resources: [...(prev.resources ?? []), { ...newResource }],
       }));
       setNewResource({ file: "", key: "" });
     }
@@ -131,7 +132,7 @@ export function ModuleForm({
   const removeResource = (index: number) => {
     setFormData((prev) => ({
       ...prev,
-      resources: prev.resources.filter((_, i) => i !== index),
+      resources: (prev.resources ?? []).filter((_, i) => i !== index),
     }));
   };
 
@@ -190,7 +191,7 @@ export function ModuleForm({
           onChange={(e) =>
             handleInputChange(
               "type",
-              e.target.value as "theory" | "technical" | "learning" | "others"
+              e.target.value as ModuleType
             )
           }
           className={`w-full px-3 py-2 border rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 ${
@@ -226,25 +227,52 @@ export function ModuleForm({
         )}
       </div>
 
-      <div>
-        <label className="block text-sm font-medium text-gray-700 mb-1">
-          Session Number *
-        </label>
-        <input
-          type="number"
-          value={formData.session}
-          onChange={(e) =>
-            handleInputChange("session", parseInt(e.target.value))
-          }
-          min="1"
-          className={`w-full px-3 py-2 border rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 ${
-            errors.session ? "border-red-500" : "border-gray-300"
-          }`}
-          placeholder="Enter session number"
-        />
-        {errors.session && (
-          <p className="text-sm text-red-600 mt-1">{errors.session}</p>
-        )}
+      <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+        <div>
+          <label className="block text-sm font-medium text-gray-700 mb-1">
+            Session Number *
+          </label>
+          <input
+            type="number"
+            value={formData.session}
+            onChange={(e) =>
+              handleInputChange("session", parseInt(e.target.value, 10) || 0)
+            }
+            min="1"
+            className={`w-full px-3 py-2 border rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 ${
+              errors.session ? "border-red-500" : "border-gray-300"
+            }`}
+            placeholder="Enter session number"
+          />
+          {errors.session && (
+            <p className="text-sm text-red-600 mt-1">{errors.session}</p>
+          )}
+        </div>
+
+        <div>
+          <label className="block text-sm font-medium text-gray-700 mb-1">
+            Sequence
+          </label>
+          <input
+            type="number"
+            value={formData.seq ?? ""}
+            onChange={(e) => {
+              const value = e.target.value;
+              handleInputChange(
+                "seq",
+                value === "" ? undefined : parseInt(value, 10),
+              );
+            }}
+            min="0"
+            className={`w-full px-3 py-2 border rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 ${
+              errors.seq ? "border-red-500" : "border-gray-300"
+            }`}
+            placeholder="Display order (optional)"
+          />
+          {errors.seq && (
+            <p className="text-sm text-red-600 mt-1">{errors.seq}</p>
+          )}
+        </div>
       </div>
 
       <div>
@@ -253,9 +281,9 @@ export function ModuleForm({
         </label>
 
         {/* Existing Resources */}
-        {formData.resources.length > 0 && (
+        {(formData.resources?.length ?? 0) > 0 && (
           <div className="space-y-2 mb-3">
-            {formData.resources.map((resource, index) => (
+            {formData.resources?.map((resource, index) => (
               <div
                 key={index}
                 className="flex items-center gap-2 p-2 bg-gray-50 rounded-md"
@@ -306,7 +334,7 @@ export function ModuleForm({
           <Button
             type="button"
             onClick={addResource}
-            disabled={!newResource.file.trim()}
+            disabled={!(newResource.file ?? "").trim()}
             size="sm"
             className="px-3"
           >
