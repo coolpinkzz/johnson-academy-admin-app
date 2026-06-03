@@ -33,8 +33,23 @@ export interface LoginResponse {
 
 // Cookie names
 const ACCESS_TOKEN_COOKIE = "access_token";
+const ACCESS_TOKEN_EXPIRES_COOKIE = "access_token_expires";
 const REFRESH_TOKEN_COOKIE = "refresh_token";
 const USER_COOKIE = "user_data";
+
+function parseJwtExpiry(token: string): Date | null {
+  try {
+    const payload = token.split(".")[1];
+    if (!payload) return null;
+    const decoded = JSON.parse(
+      atob(payload.replace(/-/g, "+").replace(/_/g, "/"))
+    ) as { exp?: number };
+    if (typeof decoded.exp !== "number") return null;
+    return new Date(decoded.exp * 1000);
+  } catch {
+    return null;
+  }
+}
 
 // Cookie expiry (360 days)
 const COOKIE_EXPIRY = 360;
@@ -46,6 +61,12 @@ export class AuthService {
   static setTokens(tokens: AuthTokens): void {
     // Store access token
     Cookies.set(ACCESS_TOKEN_COOKIE, tokens.access.token, {
+      expires: COOKIE_EXPIRY,
+      secure: process.env.NODE_ENV === "production",
+      sameSite: "strict",
+    });
+
+    Cookies.set(ACCESS_TOKEN_EXPIRES_COOKIE, tokens.access.expires, {
       expires: COOKIE_EXPIRY,
       secure: process.env.NODE_ENV === "production",
       sameSite: "strict",
@@ -71,10 +92,14 @@ export class AuthService {
   }
 
   /**
-   * Get access token from cookie
+   * Get access token from cookie (undefined if missing or expired)
    */
   static getAccessToken(): string | undefined {
-    return Cookies.get(ACCESS_TOKEN_COOKIE);
+    const token = Cookies.get(ACCESS_TOKEN_COOKIE);
+    if (!token || this.isAccessTokenExpired(token)) {
+      return undefined;
+    }
+    return token;
   }
 
   /**
@@ -101,20 +126,49 @@ export class AuthService {
   }
 
   /**
-   * Check if user is authenticated
+   * Resolve access token expiry from cookie or JWT payload
    */
-  static isAuthenticated(): boolean {
-    const accessToken = this.getAccessToken();
-    if (!accessToken) return false;
-
-    // Check if access token is expired
-    const user = this.getUser();
-    if (user) {
-      // You might want to add additional token expiry validation here
-      return true;
+  static getAccessTokenExpiry(token?: string): Date | null {
+    const expires = Cookies.get(ACCESS_TOKEN_EXPIRES_COOKIE);
+    if (expires) {
+      const date = new Date(expires);
+      if (!Number.isNaN(date.getTime())) return date;
     }
 
-    return false;
+    const accessToken = token ?? Cookies.get(ACCESS_TOKEN_COOKIE);
+    return accessToken ? parseJwtExpiry(accessToken) : null;
+  }
+
+  /**
+   * Check if access token is missing or past expiry
+   */
+  static isAccessTokenExpired(token?: string): boolean {
+    const accessToken = token ?? Cookies.get(ACCESS_TOKEN_COOKIE);
+    if (!accessToken) return true;
+
+    const expiry = this.getAccessTokenExpiry(accessToken);
+    if (!expiry) return true;
+
+    return expiry.getTime() <= Date.now();
+  }
+
+  /**
+   * Check if user is authenticated; clears stale session when invalid
+   */
+  static isAuthenticated(): boolean {
+    const accessToken = Cookies.get(ACCESS_TOKEN_COOKIE);
+    if (!accessToken || this.isAccessTokenExpired(accessToken)) {
+      this.clearAuth();
+      return false;
+    }
+
+    const user = this.getUser();
+    if (!user) {
+      this.clearAuth();
+      return false;
+    }
+
+    return true;
   }
 
   /**
@@ -122,8 +176,22 @@ export class AuthService {
    */
   static clearAuth(): void {
     Cookies.remove(ACCESS_TOKEN_COOKIE);
+    Cookies.remove(ACCESS_TOKEN_EXPIRES_COOKIE);
     Cookies.remove(REFRESH_TOKEN_COOKIE);
     Cookies.remove(USER_COOKIE);
+  }
+
+  /**
+   * Clear session and redirect to login (client-side only)
+   */
+  static handleSessionExpired(): void {
+    this.clearAuth();
+    if (typeof window === "undefined") return;
+
+    const loginPath = "/login";
+    if (!window.location.pathname.startsWith(loginPath)) {
+      window.location.assign(loginPath);
+    }
   }
 
   /**
@@ -154,10 +222,8 @@ export const useAuth = () => {
   useEffect(() => {
     const checkAuth = () => {
       const authStatus = AuthService.isAuthenticated();
-      const userData = AuthService.getUser();
-
       setIsAuthenticated(authStatus);
-      setUser(userData);
+      setUser(authStatus ? AuthService.getUser() : null);
       setIsLoading(false);
     };
 

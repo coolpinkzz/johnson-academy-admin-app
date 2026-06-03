@@ -1,6 +1,28 @@
 /* eslint-disable import/no-unresolved */
-import axios, { AxiosRequestConfig, AxiosResponse } from "axios";
+import axios, {
+  AxiosError,
+  AxiosRequestConfig,
+  AxiosResponse,
+} from "axios";
 import type { RequestData, ServerResponse } from "../models/common/client";
+import AuthService from "./auth";
+
+const httpClient = axios.create();
+
+const isPublicAuthRequest = (url?: string): boolean => {
+  if (!url) return false;
+  return url.includes("/auth/login");
+};
+
+httpClient.interceptors.response.use(
+  (response) => response,
+  (error: AxiosError) => {
+    if (error.response?.status === 401 && !isPublicAuthRequest(error.config?.url)) {
+      AuthService.handleSessionExpired();
+    }
+    return Promise.reject(error);
+  }
+);
 
 /**
  * Handle Network Requests.
@@ -63,7 +85,7 @@ const client = async <T, U>(
   };
 
   try {
-    const response: AxiosResponse<ServerResponse<T>> = await axios(config);
+    const response: AxiosResponse<ServerResponse<T>> = await httpClient(config);
     const { data: resData } = response;
 
     return resData;
