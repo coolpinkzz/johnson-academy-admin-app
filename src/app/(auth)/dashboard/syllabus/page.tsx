@@ -77,16 +77,13 @@ const SyllabusPage = () => {
   const filteredSyllabus = useMemo(() => {
     if (!searchTerm) return syllabusData;
 
+    const searchLower = searchTerm.toLowerCase();
     return syllabusData?.filter(
       (syllabus) =>
-        syllabus.title.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        syllabus.description.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        syllabus.courseId.name
-          .toLowerCase()
-          .includes(searchTerm.toLowerCase()) ||
-        syllabus.courseId.instrument
-          .toLowerCase()
-          .includes(searchTerm.toLowerCase())
+        syllabus.title?.toLowerCase().includes(searchLower) ||
+        syllabus.description?.toLowerCase().includes(searchLower) ||
+        syllabus.courseId?.name?.toLowerCase().includes(searchLower) ||
+        syllabus.courseId?.instrument?.toLowerCase().includes(searchLower)
     );
   }, [syllabusData, searchTerm]);
 
