@@ -17,6 +17,7 @@ const TeacherPage = () => {
   const { openModal, closeModal } = useModal();
   const queryClient = useQueryClient();
   const [deletingId, setDeletingId] = useState<string | null>(null);
+  const [searchTerm, setSearchTerm] = useState("");
   const {
     data: teachers,
     isLoading,
@@ -26,14 +27,23 @@ const TeacherPage = () => {
     queryFn: () => getTeachers(),
   });
 
-  const sortedTeachers = useMemo(() => {
+  const filteredTeachers = useMemo(() => {
     const list = teachers?.results ?? [];
-    return [...list].sort((a, b) =>
+    const sorted = [...list].sort((a, b) =>
       (a.name || "").localeCompare(b.name || "", undefined, {
         sensitivity: "base",
       }),
     );
-  }, [teachers?.results]);
+
+    const query = searchTerm.trim().toLowerCase();
+    if (!query) return sorted;
+
+    return sorted.filter((teacher) => {
+      const name = (teacher.name || "").toLowerCase();
+      const email = (teacher.email || "").toLowerCase();
+      return name.includes(query) || email.includes(query);
+    });
+  }, [teachers?.results, searchTerm]);
 
   const handleAddTeacher = () => {
     openModal({
@@ -135,6 +145,8 @@ const TeacherPage = () => {
                 <input
                   type="text"
                   placeholder="Search teachers..."
+                  value={searchTerm}
+                  onChange={(e) => setSearchTerm(e.target.value)}
                   className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
                 />
               </div>
@@ -165,7 +177,19 @@ const TeacherPage = () => {
                   </tr>
                 </thead>
                 <tbody className="bg-white divide-y divide-gray-200">
-                  {sortedTeachers.map((teacher) => (
+                  {filteredTeachers.length === 0 ? (
+                    <tr>
+                      <td
+                        colSpan={5}
+                        className="px-6 py-8 text-center text-sm text-gray-500"
+                      >
+                        {searchTerm.trim()
+                          ? `No teachers found matching "${searchTerm.trim()}"`
+                          : "No teachers found"}
+                      </td>
+                    </tr>
+                  ) : (
+                    filteredTeachers.map((teacher) => (
                     <tr key={teacher?._id} className="hover:bg-gray-50">
                       <td className="px-6 py-4 whitespace-nowrap">
                         <div className="flex items-center">
@@ -250,7 +274,8 @@ const TeacherPage = () => {
                         </div>
                       </td>
                     </tr>
-                  ))}
+                    ))
+                  )}
                 </tbody>
               </table>
             </div>
