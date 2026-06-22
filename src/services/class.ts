@@ -1,10 +1,15 @@
-import { ClassFormData, ClassResponse, IClass } from "@/types/class";
+import {
+  ClassFormData,
+  ClassResponse,
+  ClassesByTeacherResponse,
+  IClass,
+} from "@/types/class";
 import { AuthService } from "./auth";
 import { client } from "./api-client";
 import { ServerResponse } from "@/models/common/client";
 import {
-  QueryClient,
   useMutation,
+  useQuery,
   useQueryClient,
 } from "@tanstack/react-query";
 import { toast } from "react-toastify";
@@ -45,6 +50,39 @@ export const getClassById = async (classId: string): Promise<IClass> => {
     console.error("Error fetching class:", error);
     throw error;
   }
+};
+
+export const getClassesByTeacher = async (
+  teacherId: string,
+): Promise<ClassesByTeacherResponse> => {
+  try {
+    const response: ServerResponse<ClassesByTeacherResponse> = await client(
+      `/classes/teacher/${teacherId}`,
+      {
+        method: "GET",
+        headers: {
+          Authorization: `Bearer ${AuthService.getAccessToken()}`,
+        },
+      },
+    );
+
+    return response as unknown as ClassesByTeacherResponse;
+  } catch (error) {
+    console.error("Error fetching classes by teacher:", error);
+    throw error;
+  }
+};
+
+export const useClassesByTeacher = (
+  teacherId: string,
+  options?: { enabled?: boolean },
+) => {
+  const { enabled = true } = options ?? {};
+  return useQuery<ClassesByTeacherResponse>({
+    queryKey: ["classes", "teacher", teacherId],
+    queryFn: () => getClassesByTeacher(teacherId),
+    enabled: enabled && Boolean(teacherId),
+  });
 };
 
 export const createClass = async (

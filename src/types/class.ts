@@ -10,6 +10,7 @@ export interface ICourse {
   image: string;
   syllabus: string[];
   instrument: string;
+  level?: number;
 }
 
 export interface IStudentInClass {
@@ -69,3 +70,20 @@ export interface ClassFormData {
   /** At least one teacher id required by API */
   teachers: string[];
 }
+
+/** Class document returned from GET /classes/teacher/:teacherId */
+export interface IClassByTeacher {
+  id: string;
+  name: string;
+  teacherId: string;
+  teachers: User[];
+  students: User[];
+  studentsInClass: IStudentInClass[];
+  classMaxCapacity: number;
+  classesInOneWeek: string[];
+  endTime: string;
+  startTime: string;
+  courseId?: ICourse | string;
+}
+
+export type ClassesByTeacherResponse = IClassByTeacher[];

@@ -2,45 +2,49 @@
 
 import { useState, useEffect } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { getClasses } from "@/services/class";
-import { getStudents, getStudentsByClass } from "@/services/student";
+import { useClassesByTeacher } from "@/services/class";
+import { getTeachers } from "@/services/teacher";
+import { getStudentsByClass } from "@/services/student";
 import {
   markAttendanceAsPresent,
   markAttendanceAsAbsent,
-  getStudentAttendance,
 } from "@/services/attendance";
-import { ClassResponse } from "@/types/class";
-import { StudentInClass } from "@/types/user";
-import { AttendanceResponse } from "@/types/attendance";
-import { Users, Loader2, Calendar } from "lucide-react";
+import { StudentInClass, UserResponse } from "@/types/user";
+import { Loader2, Calendar } from "lucide-react";
 import AttendanceCalendarModal from "@/components/modal/AttendanceCalendarModal";
+import { DatePicker } from "@/components/DatePicker";
+import { TeacherSelect } from "@/components/TeacherSelect";
+import { ClassSelect } from "@/components/ClassSelect";
+import { formatDisplayDate } from "@/lib/utils";
 
 export default function AttendancePage() {
   const [selectedDate, setSelectedDate] = useState(
-    new Date().toISOString().split("T")[0]
+    new Date().toISOString().split("T")[0],
   );
-  const [selectedClass, setSelectedClass] = useState("all");
+  const [selectedTeacherId, setSelectedTeacherId] = useState("");
+  const [selectedClass, setSelectedClass] = useState("");
   const [selectedClassId, setSelectedClassId] = useState<string>("");
   const [calendarModalOpen, setCalendarModalOpen] = useState(false);
   const [selectedStudent, setSelectedStudent] = useState<StudentInClass | null>(
-    null
+    null,
   );
   const queryClient = useQueryClient();
 
-  // Fetch classes for the filter dropdown
   const {
-    data: classesData,
-    isLoading: classesLoading,
-    error: classesError,
-  } = useQuery<ClassResponse>({
-    queryKey: ["classes"],
-    queryFn: () => getClasses(),
+    data: teachersData,
+    isLoading: teachersLoading,
+    error: teachersError,
+  } = useQuery<UserResponse>({
+    queryKey: ["teachers"],
+    queryFn: () => getTeachers(),
   });
 
-  // Fetch students for attendance
-  const { data: studentsData } = useQuery({
-    queryKey: ["students"],
-    queryFn: () => getStudents(),
+  const {
+    data: teacherClassesData,
+    isLoading: teacherClassesLoading,
+    error: teacherClassesError,
+  } = useClassesByTeacher(selectedTeacherId, {
+    enabled: Boolean(selectedTeacherId),
   });
 
   // Fetch students by class when a class is selected
@@ -94,30 +98,41 @@ export default function AttendancePage() {
     },
   });
 
-  // Auto-select first class when classes data loads
+  // Auto-select first class when teacher classes load
   useEffect(() => {
-    if (
-      classesData?.results &&
-      classesData.results.length > 0 &&
-      selectedClass === "all"
-    ) {
-      const firstClass = classesData.results[0];
-      setSelectedClass(firstClass.name);
-      setSelectedClassId(firstClass.id || "");
+    const classes = teacherClassesData ?? [];
+    if (classes.length === 0) {
+      setSelectedClass("");
+      setSelectedClassId("");
+      return;
     }
-  }, [classesData, selectedClass]);
 
-  const handleClassChange = (className: string) => {
-    setSelectedClass(className);
-    const selectedClassObj = classesData?.results?.find(
-      (c) => c.name === className
+    const currentClass = classes.find(
+      (c) => c.name === selectedClass || c.id === selectedClassId,
     );
-    setSelectedClassId(selectedClassObj?.id || "");
+
+    if (!currentClass) {
+      const firstClass = classes[0];
+      setSelectedClass(firstClass.name);
+      setSelectedClassId(firstClass.id);
+    }
+  }, [teacherClassesData, selectedClass, selectedClassId]);
+
+  const handleTeacherChange = (teacherId: string) => {
+    setSelectedTeacherId(teacherId);
+    setSelectedClass("");
+    setSelectedClassId("");
+  };
+
+  const handleClassChange = (classId: string) => {
+    const selectedClassObj = teacherClassesData?.find((c) => c.id === classId);
+    setSelectedClassId(classId);
+    setSelectedClass(selectedClassObj?.name || "");
   };
 
   const handleMarkAttendance = (
     studentId: string,
-    status: "present" | "absent"
+    status: "present" | "absent",
   ) => {
     if (!selectedClassId || !selectedDate) return;
 
@@ -245,38 +260,32 @@ export default function AttendancePage() {
       <div className="bg-white p-6 rounded-lg shadow-sm border">
         <div className="flex flex-col md:flex-row gap-4">
           <div className="flex-1">
-            <label className="block text-sm font-medium text-gray-700 mb-2">
-              Date
-            </label>
-            <input
-              type="date"
+            <DatePicker
+              label="Date"
               value={selectedDate}
-              onChange={(e) => setSelectedDate(e.target.value)}
-              className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+              onChange={setSelectedDate}
             />
           </div>
           <div className="flex-1">
-            <label className="block text-sm font-medium text-gray-700 mb-2">
-              Class
-            </label>
-            <select
-              value={selectedClass}
-              onChange={(e) => handleClassChange(e.target.value)}
-              disabled={classesLoading}
-              className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 disabled:bg-gray-100 disabled:cursor-not-allowed"
-            >
-              {classesLoading ? (
-                <option disabled>Loading classes...</option>
-              ) : classesError ? (
-                <option disabled>Error loading classes</option>
-              ) : (
-                classesData?.results?.map((classItem) => (
-                  <option key={classItem.id} value={classItem.name}>
-                    {classItem.name}
-                  </option>
-                ))
-              )}
-            </select>
+            <TeacherSelect
+              label="Teacher"
+              value={selectedTeacherId}
+              onChange={handleTeacherChange}
+              teachers={teachersData?.results ?? []}
+              isLoading={teachersLoading}
+              error={teachersError}
+            />
+          </div>
+          <div className="flex-1">
+            <ClassSelect
+              label="Class"
+              value={selectedClassId}
+              onChange={handleClassChange}
+              classes={teacherClassesData ?? []}
+              isLoading={teacherClassesLoading}
+              error={teacherClassesError}
+              noTeacherSelected={!selectedTeacherId}
+            />
           </div>
         </div>
       </div>
@@ -286,8 +295,7 @@ export default function AttendancePage() {
         <div className="bg-white rounded-lg shadow-sm border overflow-hidden">
           <div className="px-6 py-4 border-b">
             <h3 className="text-lg font-semibold text-gray-900">
-              Students in {selectedClass} -{" "}
-              {new Date(selectedDate).toLocaleDateString()}
+              Students in {selectedClass} - {formatDisplayDate(selectedDate)}
             </h3>
             <p className="text-sm text-gray-600 mt-1">
               {classStudentsData.length} students enrolled
@@ -369,9 +377,8 @@ export default function AttendancePage() {
                           <div className="text-sm font-medium text-gray-900">
                             {student.name}
                           </div>
-                          <div className="text-sm text-gray-500">
-                            ID: {student.id}
-                          </div>
+                          {/* <div className="text-sm text-gray-500">
+                          </div> */}
                         </td>
                         <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
                           {student.email}
