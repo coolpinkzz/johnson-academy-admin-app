@@ -13,9 +13,10 @@ import {
 } from "@/types/class";
 import { useQuery } from "@tanstack/react-query";
 import { Plus, Search, Users, BookOpen, User as UserIcon } from "lucide-react";
-import { useCallback } from "react";
+import { useCallback, useMemo, useState } from "react";
 
 const ClassesPage = () => {
+  const [searchTerm, setSearchTerm] = useState("");
   const {
     handleClassForm,
     handleEditClass,
@@ -79,6 +80,29 @@ const ClassesPage = () => {
 
   const TEACHER_STACK_MAX = 5;
 
+  const filteredClasses = useMemo(() => {
+    const list = classesData?.results ?? [];
+    const query = searchTerm.trim().toLowerCase();
+    if (!query) return list;
+
+    return list.filter((classItem) => {
+      const name = (classItem.name || "").toLowerCase();
+      const teachers = getClassTeacherList(classItem)
+        .map((t) => getTeacherDisplayName(t).toLowerCase())
+        .join(" ");
+      const instrument =
+        typeof classItem.courseId === "string"
+          ? ""
+          : (classItem.courseId?.instrument || "").toLowerCase();
+
+      return (
+        name.includes(query) ||
+        teachers.includes(query) ||
+        instrument.includes(query)
+      );
+    });
+  }, [classesData?.results, searchTerm, getTeacherDisplayName]);
+
   if (isLoading) {
     return (
       <ProtectedRoute>
@@ -133,6 +157,8 @@ const ClassesPage = () => {
                 <input
                   type="text"
                   placeholder="Search classes..."
+                  value={searchTerm}
+                  onChange={(e) => setSearchTerm(e.target.value)}
                   className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent text-sm sm:text-base"
                 />
               </div>
@@ -140,8 +166,9 @@ const ClassesPage = () => {
           </div>
 
           {/* Classes Grid */}
+          {filteredClasses.length > 0 && (
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 sm:gap-6">
-            {classesData?.results?.map((classItem) => {
+            {filteredClasses.map((classItem) => {
               const teacherList = getClassTeacherList(classItem);
               const teachersLabel = formatTeacherNames(teacherList);
               const teacherAvatars = teacherList.map((t) =>
@@ -276,26 +303,31 @@ const ClassesPage = () => {
             );
             })}
           </div>
+          )}
 
           {/* Empty State */}
-          {(!classesData?.results || classesData.results.length === 0) && (
+          {filteredClasses.length === 0 && (
             <div className="text-center py-12">
               <BookOpen className="mx-auto h-12 w-12 text-gray-400" />
               <h3 className="mt-2 text-sm font-medium text-gray-900">
-                No classes
+                {searchTerm.trim() ? "No classes found" : "No classes"}
               </h3>
               <p className="mt-1 text-sm text-gray-500">
-                Get started by creating your first class.
+                {searchTerm.trim()
+                  ? `No classes found matching "${searchTerm.trim()}"`
+                  : "Get started by creating your first class."}
               </p>
-              <div className="mt-6">
-                <button
-                  onClick={handleClassForm}
-                  className="inline-flex items-center px-4 py-2 border border-transparent shadow-sm text-sm font-medium rounded-md text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500"
-                >
-                  <Plus className="-ml-1 mr-2 h-5 w-5" />
-                  Create Class
-                </button>
-              </div>
+              {!searchTerm.trim() && (
+                <div className="mt-6">
+                  <button
+                    onClick={handleClassForm}
+                    className="inline-flex items-center px-4 py-2 border border-transparent shadow-sm text-sm font-medium rounded-md text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500"
+                  >
+                    <Plus className="-ml-1 mr-2 h-5 w-5" />
+                    Create Class
+                  </button>
+                </div>
+              )}
             </div>
           )}
         </main>
