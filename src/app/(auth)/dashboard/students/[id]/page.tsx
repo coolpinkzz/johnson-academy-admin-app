@@ -46,38 +46,46 @@ const StudentDetailPage = () => {
     enabled: !!studentId,
   });
 
-  console.log(student);
-
-  function mergeClassesWithProgress(studentData: User) {
+  function mergeCoursesWithProgress(studentData: User) {
     if (!studentData) return [];
 
-    const { classes, progress } = studentData;
-
-    return classes.map((cls) => {
-      // find progress entry for this class
-      const classProgress = progress.find((p) => p.classId === cls.id);
+    const { courses, progress, classes } = studentData;
+    return courses.map((course) => {
+      const courseProgress = progress.find((p) => p.courseId === course.id);
+      const classForCourse = classes.find((cls) => cls.courseId === course.id);
 
       return {
-        classId: cls.id,
-        className: cls.name,
-        progress: classProgress ? classProgress.progress : 0,
-        totalModules: classProgress ? classProgress.totalModules : 0,
-        completedModules: classProgress ? classProgress.completedModules : 0,
-        inProgressModules: classProgress ? classProgress.inProgressModules : 0,
-        upcomingModules: classProgress ? classProgress.upcomingModules : 0,
-        syllabusProgress: classProgress ? classProgress.syllabusProgress : [],
+        courseId: course.id,
+        courseName: course.name,
+        classId: courseProgress?.classId,
+        progress: courseProgress ? courseProgress.progress : 0,
+        totalModules: courseProgress ? courseProgress.totalModules : 0,
+        completedModules: courseProgress ? courseProgress.completedModules : 0,
+        inProgressModules: courseProgress
+          ? courseProgress.inProgressModules
+          : 0,
+        upcomingModules: courseProgress ? courseProgress.upcomingModules : 0,
+        syllabusProgress: courseProgress ? courseProgress.syllabusProgress : [],
       };
     });
   }
 
-  const handleProgressCardClick = (classId: string, className: string) => {
+  const handleProgressCardClick = (
+    classId: string | undefined,
+    courseName: string,
+    courseId: string,
+  ) => {
+    console.log("classId", classId);
+    if (!classId) return;
+
     openModal({
-      title: `Progress Details - ${className}`,
+      title: `Progress Details - ${courseName}`,
       content: (
         <StudentProgressModal
           studentId={studentId}
           classId={classId}
-          className={className}
+          className={courseName}
+          courseId={courseId}
         />
       ),
       size: "half",
@@ -294,7 +302,7 @@ const StudentDetailPage = () => {
                   Academic Information
                 </h3>
                 {(() => {
-                  const mergedData = mergeClassesWithProgress(student);
+                  const mergedData = mergeCoursesWithProgress(student);
                   const totalCompletedModules = mergedData.reduce(
                     (sum, item) => sum + item.completedModules,
                     0,
@@ -363,58 +371,60 @@ const StudentDetailPage = () => {
                   );
                 })()}
 
-                {/* Detailed Progress by Class */}
+                {/* Detailed Progress by Course */}
                 {(() => {
-                  const mergedData = mergeClassesWithProgress(student);
+                  const mergedData = mergeCoursesWithProgress(student);
+                  console.log("mergedData", mergedData);
                   if (mergedData.length === 0) return null;
 
                   return (
                     <div className="mt-6">
                       <h4 className="text-md font-semibold text-gray-900 mb-4">
-                        Progress by Class
+                        Progress by Course
                       </h4>
                       <div className="space-y-4">
-                        {mergedData.map((classData) => (
+                        {mergedData.map((courseData) => (
                           <div
-                            key={classData.classId}
+                            key={courseData.courseId}
                             className="border rounded-lg p-4 bg-gray-50 hover:bg-gray-100 cursor-pointer transition-colors"
                             onClick={() =>
                               handleProgressCardClick(
-                                classData.classId,
-                                classData.className,
+                                courseData.classId,
+                                courseData.courseName,
+                                courseData.courseId,
                               )
                             }
                           >
                             <div className="flex justify-between items-start mb-2">
                               <h5 className="font-medium text-gray-900">
-                                {classData.className}
+                                {courseData.courseName}
                               </h5>
                               <span className="text-sm font-semibold text-blue-600">
-                                {classData.progress}%
+                                {courseData.progress}%
                               </span>
                             </div>
                             <div className="w-full bg-gray-200 rounded-full h-2 mb-3">
                               <div
                                 className="bg-blue-600 h-2 rounded-full transition-all duration-300"
-                                style={{ width: `${classData.progress}%` }}
+                                style={{ width: `${courseData.progress}%` }}
                               ></div>
                             </div>
                             <div className="grid grid-cols-3 gap-4 text-sm">
                               <div className="text-center">
                                 <p className="font-semibold text-emerald-600">
-                                  {classData.completedModules}
+                                  {courseData.completedModules}
                                 </p>
                                 <p className="text-gray-600">Completed</p>
                               </div>
                               <div className="text-center">
                                 <p className="font-semibold text-yellow-600">
-                                  {classData.inProgressModules}
+                                  {courseData.inProgressModules}
                                 </p>
                                 <p className="text-gray-600">In Progress</p>
                               </div>
                               <div className="text-center">
                                 <p className="font-semibold text-gray-600">
-                                  {classData.upcomingModules}
+                                  {courseData.upcomingModules}
                                 </p>
                                 <p className="text-gray-600">Upcoming</p>
                               </div>

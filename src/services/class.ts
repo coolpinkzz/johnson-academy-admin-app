@@ -165,6 +165,7 @@ export const addSingleStudentToClass = async (
 export const removeStudentFromClass = async (
   classId: string,
   studentId: string,
+  courseId: string,
 ) => {
   const response = await client(`/classes/${classId}/remove-student`, {
     method: "PATCH",
@@ -173,6 +174,7 @@ export const removeStudentFromClass = async (
     },
     data: {
       studentId,
+      courseId,
     },
   });
 
@@ -211,10 +213,12 @@ export const useRemoveStudentFromClass = () => {
     mutationFn: ({
       classId,
       studentId,
+      courseId,
     }: {
       classId: string;
       studentId: string;
-    }) => removeStudentFromClass(classId, studentId),
+      courseId: string;
+    }) => removeStudentFromClass(classId, studentId, courseId),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["classes"] });
       toast.success("Student removed from class successfully");

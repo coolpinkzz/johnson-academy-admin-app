@@ -131,9 +131,10 @@ export const updateStudentProfile = async (
 export const getStudentProgress = async (
   studentId: string,
   classId: string,
+  courseId: string,
 ): Promise<StudentProgressResponse> => {
   const response: ServerResponse<StudentProgressResponse> = await client(
-    `/student-progress/student/${studentId}/class/${classId}`,
+    `/student-progress/student/${studentId}/class/${classId}?courseId=${courseId}`,
     {
       method: "GET",
       headers: {

@@ -18,15 +18,17 @@ export function ViewStudentsInClassModal({
   const { closeModal } = useModal();
   const [students, setStudents] = useState(initialStudents);
   const [removingStudentId, setRemovingStudentId] = useState<string | null>(
-    null
+    null,
   );
   const { mutateAsync: removeStudent } = useRemoveStudentFromClass();
 
-  const handleRemove = async (studentId: string) => {
+  const handleRemove = async (studentId: string, courseId: string) => {
     setRemovingStudentId(studentId);
     try {
-      await removeStudent({ classId, studentId });
-      setStudents((prev) => prev.filter((s) => (s.user._id || s.user.id) !== studentId));
+      await removeStudent({ classId, studentId, courseId });
+      setStudents((prev) =>
+        prev.filter((s) => (s.user._id || s.user.id) !== studentId),
+      );
       if (students.length <= 1) {
         closeModal();
       }
@@ -47,6 +49,7 @@ export function ViewStudentsInClassModal({
         <ul className="divide-y divide-gray-200">
           {students.map((student) => {
             const studentId = student.user._id || student.user.id;
+            const courseId = student.course.id;
             const isRemoving = removingStudentId === studentId;
             return (
               <li
@@ -72,7 +75,7 @@ export function ViewStudentsInClassModal({
                 </div>
                 <button
                   type="button"
-                  onClick={() => handleRemove(studentId)}
+                  onClick={() => handleRemove(studentId, courseId)}
                   disabled={isRemoving}
                   className="flex-shrink-0 p-2 text-red-600 hover:text-red-800 hover:bg-red-50 rounded transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
                   title="Remove from class"
