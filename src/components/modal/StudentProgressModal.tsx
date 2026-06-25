@@ -20,21 +20,23 @@ interface StudentProgressModalProps {
   studentId: string;
   classId: string;
   className: string;
+  courseId: string;
 }
 
 const StudentProgressModal: React.FC<StudentProgressModalProps> = ({
   studentId,
   classId,
   className,
+  courseId,
 }) => {
   const {
     data: progressData,
     isLoading,
     error,
   } = useQuery<StudentProgressResponse>({
-    queryKey: ["student-progress", studentId, classId],
-    queryFn: () => getStudentProgress(studentId, classId),
-    enabled: !!studentId && !!classId,
+    queryKey: ["student-progress", studentId, classId, courseId],
+    queryFn: () => getStudentProgress(studentId, classId, courseId),
+    enabled: !!studentId && !!classId && !!courseId,
   });
 
   const getStatusIcon = (status: string) => {
@@ -215,14 +217,14 @@ const StudentProgressModal: React.FC<StudentProgressModalProps> = ({
                               </h5>
                               <span
                                 className={`px-2 py-1 rounded-full text-xs font-medium ${getModuleTypeColor(
-                                  module.moduleId.type
+                                  module.moduleId.type,
                                 )}`}
                               >
                                 {module.moduleId.type}
                               </span>
                               <span
                                 className={`px-2 py-1 rounded-full text-xs font-medium ${getStatusColor(
-                                  module.status
+                                  module.status,
                                 )}`}
                               >
                                 {module.status}
@@ -344,7 +346,7 @@ const StudentProgressModal: React.FC<StudentProgressModalProps> = ({
                                     <Download className="h-3 w-3" />
                                     {resource.key}
                                   </a>
-                                )
+                                ),
                               )}
                             </div>
                           </div>
