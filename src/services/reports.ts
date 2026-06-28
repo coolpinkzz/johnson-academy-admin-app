@@ -4,19 +4,39 @@ import { AuthService } from "./auth";
 import {
   MonthlyReportRequest,
   MonthlyReportResponse,
-  ReportCheckResponse,
   StudentMonthlyReportRequest,
   StudentMonthlyReportResponse,
+  MRTListParams,
+  MRTListResponse,
 } from "@/types/reports";
+
+const buildMRTQueryString = (params: MRTListParams): string => {
+  const searchParams = new URLSearchParams();
+  if (params.courseId) searchParams.set("courseId", params.courseId);
+  if (params.classId) searchParams.set("classId", params.classId);
+  if (params.studentId) searchParams.set("studentId", params.studentId);
+  if (params.month) searchParams.set("month", params.month);
+  if (params.page != null) searchParams.set("page", String(params.page));
+  if (params.limit != null) searchParams.set("limit", String(params.limit));
+  if (params.sortBy) searchParams.set("sortBy", params.sortBy);
+  if (params.sortOrder) searchParams.set("sortOrder", params.sortOrder);
+  const query = searchParams.toString();
+  return query ? `?${query}` : "";
+};
 
 export const generateMonthlyReport = async (
   request: MonthlyReportRequest
 ): Promise<MonthlyReportResponse> => {
   try {
-    // Use the actual PDF generation endpoint
     const baseUrl = process.env.NEXT_PUBLIC_API_BASE_URL;
+    const params = new URLSearchParams({
+      studentId: request.studentId,
+      classId: request.classId,
+      courseId: request.courseId,
+      month: request.month,
+    });
     const response = await fetch(
-      `${baseUrl}/pdf/attendance?studentId=${request.studentId}&classId=${request.classId}&month=${request.month}`,
+      `${baseUrl}/pdf/attendance?${params.toString()}`,
       {
         method: "GET",
         headers: {
@@ -29,13 +49,8 @@ export const generateMonthlyReport = async (
       throw new Error(`HTTP error! status: ${response.status}`);
     }
 
-    // Get the PDF blob
     const blob = await response.blob();
-
-    // Create a temporary URL for the blob
     const reportUrl = URL.createObjectURL(blob);
-
-    // Generate filename
     const fileName = `attendance-report-${request.studentId}-${request.month}.pdf`;
 
     return {
@@ -51,13 +66,11 @@ export const generateMonthlyReport = async (
 
 export const downloadReport = async (reportUrl: string): Promise<Blob> => {
   try {
-    // If it's a blob URL, fetch it directly
     if (reportUrl.startsWith("blob:")) {
       const response = await fetch(reportUrl);
       return await response.blob();
     }
 
-    // If it's a regular URL, use the authorization header
     const response = await fetch(reportUrl, {
       headers: {
         Authorization: `Bearer ${AuthService.getAccessToken()}`,
@@ -76,19 +89,68 @@ export const downloadReport = async (reportUrl: string): Promise<Blob> => {
 };
 
 export const checkReportExists = async (
-  request: MonthlyReportRequest
+  _request: MonthlyReportRequest
 ): Promise<boolean> => {
-  // Since we're generating reports on-demand, we don't need to check if they exist
-  // This function is kept for compatibility but always returns false
   return false;
+};
+
+export const getMRTs = async (
+  params: MRTListParams = {}
+): Promise<MRTListResponse> => {
+  const response: ServerResponse<MRTListResponse> = await client(
+    `/mrt${buildMRTQueryString(params)}`,
+    {
+      method: "GET",
+      headers: {
+        Authorization: `Bearer ${AuthService.getAccessToken()}`,
+      },
+    }
+  );
+
+  return response as unknown as MRTListResponse;
+};
+
+export const getMRTsByStudent = async (
+  studentId: string,
+  params: Omit<MRTListParams, "studentId"> = {}
+): Promise<MRTListResponse> => {
+  const response: ServerResponse<MRTListResponse> = await client(
+    `/mrt/student/${studentId}${buildMRTQueryString(params)}`,
+    {
+      method: "GET",
+      headers: {
+        Authorization: `Bearer ${AuthService.getAccessToken()}`,
+      },
+    }
+  );
+
+  return response as unknown as MRTListResponse;
+};
+
+export const getMRTsByClass = async (
+  classId: string,
+  params: Omit<MRTListParams, "classId"> = {}
+): Promise<MRTListResponse> => {
+  const response: ServerResponse<MRTListResponse> = await client(
+    `/mrt/class/${classId}${buildMRTQueryString(params)}`,
+    {
+      method: "GET",
+      headers: {
+        Authorization: `Bearer ${AuthService.getAccessToken()}`,
+      },
+    }
+  );
+
+  return response as unknown as MRTListResponse;
 };
 
 export const getStudentMonthlyReport = async (
   request: StudentMonthlyReportRequest
 ): Promise<StudentMonthlyReportResponse> => {
   try {
+    const params = new URLSearchParams({ courseId: request.courseId });
     const response = await client(
-      `/mrt/student/${request.studentId}/class/${request.classId}/month/${request.month}`,
+      `/mrt/student/${request.studentId}/class/${request.classId}/month/${request.month}?${params.toString()}`,
       {
         method: "GET",
         headers: {
@@ -97,9 +159,7 @@ export const getStudentMonthlyReport = async (
       }
     );
 
-    const data: StudentMonthlyReportResponse =
-      response as unknown as StudentMonthlyReportResponse;
-    return data;
+    return response as unknown as StudentMonthlyReportResponse;
   } catch (error) {
     console.error("Error fetching student monthly report:", error);
     throw error;

@@ -3,30 +3,55 @@
 import ProtectedRoute from "@/components/ProtectedRoute";
 import { useAuth } from "@/services/auth";
 import { getClasses } from "@/services/class";
-import { getStudentsByClass } from "@/services/student";
 import { generateMonthlyReport, downloadReport } from "@/services/reports";
-import { ClassResponse, IClass } from "@/types/class";
-import { StudentInClass } from "@/types/user";
+import { ClassResponse, IClass, IStudentInClass } from "@/types/class";
+import {
+  StudentEnrollmentOption,
+} from "@/types/reports";
 import { useQuery } from "@tanstack/react-query";
 import {
   Bell,
-  Search,
-  Filter,
   Download,
   Calendar,
   Users,
   FileText,
   ChevronDown,
   Check,
+  BookOpen,
 } from "lucide-react";
 import React, { useState, useMemo } from "react";
+
+function toEnrollmentOptions(
+  studentsInClass: IClass["studentsInClass"] | undefined
+): StudentEnrollmentOption[] {
+  if (!studentsInClass?.length) return [];
+
+  return studentsInClass
+    .filter(
+      (entry): entry is IStudentInClass =>
+        typeof entry === "object" && entry != null && "user" in entry && "course" in entry
+    )
+    .map((entry) => {
+      const studentId = entry.user._id || entry.user.id;
+      const courseId =
+        entry.course.id || (entry.course as { _id?: string })._id || "";
+      return {
+        enrollmentKey: `${studentId}-${courseId}`,
+        studentId,
+        studentName: entry.user.name,
+        studentEmail: entry.user.email,
+        courseId,
+        courseName: entry.course.name,
+      };
+    })
+    .filter((entry) => entry.studentId && entry.courseId);
+}
 
 const MonthlyReportsPage = () => {
   const { user } = useAuth();
   const [selectedClass, setSelectedClass] = useState<IClass | null>(null);
-  const [selectedStudent, setSelectedStudent] = useState<StudentInClass | null>(
-    null
-  );
+  const [selectedEnrollment, setSelectedEnrollment] =
+    useState<StudentEnrollmentOption | null>(null);
   const [selectedMonth, setSelectedMonth] = useState<string>("");
   const [isGenerating, setIsGenerating] = useState(false);
   const [reportUrl, setReportUrl] = useState<string | null>(null);
@@ -34,7 +59,6 @@ const MonthlyReportsPage = () => {
   const [showStudentDropdown, setShowStudentDropdown] = useState(false);
   const [showMonthDropdown, setShowMonthDropdown] = useState(false);
 
-  // Get all classes
   const {
     data: classesData,
     isLoading: classesLoading,
@@ -44,18 +68,11 @@ const MonthlyReportsPage = () => {
     queryFn: () => getClasses(),
   });
 
-  // Get students for selected class
-  const {
-    data: studentsData,
-    isLoading: studentsLoading,
-    error: studentsError,
-  } = useQuery<StudentInClass[]>({
-    queryKey: ["students", selectedClass?.id],
-    queryFn: () => getStudentsByClass(selectedClass?.id || ""),
-    enabled: !!selectedClass?.id,
-  });
+  const enrollments = useMemo(
+    () => toEnrollmentOptions(selectedClass?.studentsInClass),
+    [selectedClass]
+  );
 
-  // Generate months list for the current year
   const months = useMemo(() => {
     const currentYear = new Date().getFullYear();
     const monthsList = [];
@@ -74,13 +91,13 @@ const MonthlyReportsPage = () => {
 
   const handleClassSelect = (classItem: IClass) => {
     setSelectedClass(classItem);
-    setSelectedStudent(null); // Reset student selection
+    setSelectedEnrollment(null);
     setReportUrl(null);
     setShowClassDropdown(false);
   };
 
-  const handleStudentSelect = (student: StudentInClass) => {
-    setSelectedStudent(student);
+  const handleEnrollmentSelect = (enrollment: StudentEnrollmentOption) => {
+    setSelectedEnrollment(enrollment);
     setReportUrl(null);
     setShowStudentDropdown(false);
   };
@@ -92,21 +109,21 @@ const MonthlyReportsPage = () => {
   };
 
   const handleGenerateReport = async () => {
-    if (!selectedClass || !selectedStudent || !selectedMonth) {
+    if (!selectedClass || !selectedEnrollment || !selectedMonth) {
       return;
     }
 
     setIsGenerating(true);
     try {
       const response = await generateMonthlyReport({
-        classId: selectedClass.id || "",
-        studentId: selectedStudent.id,
+        classId: selectedClass.id || selectedClass._id || "",
+        studentId: selectedEnrollment.studentId,
+        courseId: selectedEnrollment.courseId,
         month: selectedMonth,
       });
 
       setReportUrl(response.reportUrl);
 
-      // Auto-download the report
       const blob = await downloadReport(response.reportUrl);
       const url = window.URL.createObjectURL(blob);
       const a = document.createElement("a");
@@ -124,12 +141,12 @@ const MonthlyReportsPage = () => {
     }
   };
 
-  const isFormValid = selectedClass && selectedStudent && selectedMonth;
+  const isFormValid =
+    selectedClass && selectedEnrollment && selectedMonth;
 
   return (
     <ProtectedRoute>
       <div className="flex flex-col h-full">
-        {/* Top Header */}
         <header className="flex h-16 items-center gap-2 border-b px-4 bg-white">
           <div className="flex items-center justify-between flex-1 px-4">
             <div>
@@ -149,9 +166,7 @@ const MonthlyReportsPage = () => {
           </div>
         </header>
 
-        {/* Main Content Area */}
         <main className="flex-1 overflow-auto p-6 bg-gray-50">
-          {/* Report Generation Form */}
           <div className="max-w-4xl mx-auto">
             <div className="bg-white rounded-lg shadow-sm border p-6 mb-6">
               <h2 className="text-lg font-semibold text-gray-900 mb-6">
@@ -159,7 +174,6 @@ const MonthlyReportsPage = () => {
               </h2>
 
               <div className="space-y-6">
-                {/* Class Selection */}
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-2">
                     Select Class
@@ -199,14 +213,15 @@ const MonthlyReportsPage = () => {
                         ) : (
                           classesData?.results?.map((classItem) => (
                             <button
-                              key={classItem.id}
+                              key={classItem.id || classItem._id}
                               onClick={() => handleClassSelect(classItem)}
                               className="w-full flex items-center justify-between px-3 py-2 text-left hover:bg-gray-100"
                             >
                               <span className="text-gray-900">
                                 {classItem.name}
                               </span>
-                              {selectedClass?.id === classItem.id && (
+                              {(selectedClass?.id || selectedClass?._id) ===
+                                (classItem.id || classItem._id) && (
                                 <Check className="h-4 w-4 text-blue-600" />
                               )}
                             </button>
@@ -217,10 +232,9 @@ const MonthlyReportsPage = () => {
                   </div>
                 </div>
 
-                {/* Student Selection */}
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-2">
-                    Select Student
+                    Select Student & Course
                   </label>
                   <div className="relative">
                     <button
@@ -233,11 +247,11 @@ const MonthlyReportsPage = () => {
                     >
                       <span
                         className={
-                          selectedStudent ? "text-gray-900" : "text-gray-500"
+                          selectedEnrollment ? "text-gray-900" : "text-gray-500"
                         }
                       >
-                        {selectedStudent
-                          ? selectedStudent.name
+                        {selectedEnrollment
+                          ? `${selectedEnrollment.studentName} — ${selectedEnrollment.courseName}`
                           : "Choose a student..."}
                       </span>
                       <ChevronDown className="h-4 w-4 text-gray-400" />
@@ -245,39 +259,32 @@ const MonthlyReportsPage = () => {
 
                     {showStudentDropdown && selectedClass && (
                       <div className="absolute z-10 w-full mt-1 bg-white border border-gray-300 rounded-lg shadow-lg max-h-60 overflow-auto">
-                        {studentsLoading ? (
+                        {enrollments.length === 0 ? (
                           <div className="p-3 text-center text-gray-500">
-                            Loading students...
-                          </div>
-                        ) : studentsError ? (
-                          <div className="p-3 text-center text-red-500">
-                            Error loading students
-                          </div>
-                        ) : studentsData?.length === 0 ? (
-                          <div className="p-3 text-center text-gray-500">
-                            No students found in this class
+                            No students enrolled in this class
                           </div>
                         ) : (
-                          studentsData?.map((student) => (
+                          enrollments.map((enrollment) => (
                             <button
-                              key={student.id}
-                              onClick={() => handleStudentSelect(student)}
+                              key={enrollment.enrollmentKey}
+                              onClick={() => handleEnrollmentSelect(enrollment)}
                               className="w-full flex items-center justify-between px-3 py-2 text-left hover:bg-gray-100"
                             >
                               <div className="flex items-center gap-3">
                                 <div className="h-8 w-8 rounded-full bg-blue-600 flex items-center justify-center text-white text-sm font-medium">
-                                  {student.name.charAt(0)}
+                                  {enrollment.studentName.charAt(0)}
                                 </div>
                                 <div>
                                   <div className="text-gray-900">
-                                    {student.name}
+                                    {enrollment.studentName}
                                   </div>
                                   <div className="text-sm text-gray-500">
-                                    {student.email}
+                                    {enrollment.courseName} · {enrollment.studentEmail}
                                   </div>
                                 </div>
                               </div>
-                              {selectedStudent?.id === student.id && (
+                              {selectedEnrollment?.enrollmentKey ===
+                                enrollment.enrollmentKey && (
                                 <Check className="h-4 w-4 text-blue-600" />
                               )}
                             </button>
@@ -288,7 +295,6 @@ const MonthlyReportsPage = () => {
                   </div>
                 </div>
 
-                {/* Month Selection */}
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-2">
                     Select Month
@@ -333,7 +339,6 @@ const MonthlyReportsPage = () => {
                   </div>
                 </div>
 
-                {/* Generate Button */}
                 <div className="pt-4">
                   <button
                     onClick={handleGenerateReport}
@@ -356,13 +361,12 @@ const MonthlyReportsPage = () => {
               </div>
             </div>
 
-            {/* Report Preview/Info */}
             {isFormValid && (
               <div className="bg-white rounded-lg shadow-sm border p-6">
                 <h3 className="text-lg font-semibold text-gray-900 mb-4">
                   Report Preview
                 </h3>
-                <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                   <div className="flex items-center gap-3 p-3 bg-gray-50 rounded-lg">
                     <div className="h-10 w-10 rounded-full bg-blue-100 flex items-center justify-center">
                       <Users className="h-5 w-5 text-blue-600" />
@@ -386,7 +390,21 @@ const MonthlyReportsPage = () => {
                         Student
                       </div>
                       <div className="text-sm text-gray-600">
-                        {selectedStudent.name}
+                        {selectedEnrollment.studentName}
+                      </div>
+                    </div>
+                  </div>
+
+                  <div className="flex items-center gap-3 p-3 bg-gray-50 rounded-lg">
+                    <div className="h-10 w-10 rounded-full bg-amber-100 flex items-center justify-center">
+                      <BookOpen className="h-5 w-5 text-amber-600" />
+                    </div>
+                    <div>
+                      <div className="text-sm font-medium text-gray-900">
+                        Course
+                      </div>
+                      <div className="text-sm text-gray-600">
+                        {selectedEnrollment.courseName}
                       </div>
                     </div>
                   </div>
