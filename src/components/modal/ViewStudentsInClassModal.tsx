@@ -1,8 +1,13 @@
 "use client";
 
-import React, { useState } from "react";
+import React, { useMemo, useState } from "react";
 import { User as UserIcon, Trash2 } from "lucide-react";
-import { IStudentInClass } from "@/types/class";
+import {
+  IStudentInClass,
+  getPopulatedStudentsInClass,
+  getStudentInClassCourseId,
+  getStudentInClassUserId,
+} from "@/types/class";
 import { useRemoveStudentFromClass } from "@/services/class";
 import { useModal } from "@/components/modal";
 
@@ -16,18 +21,28 @@ export function ViewStudentsInClassModal({
   students: initialStudents,
 }: ViewStudentsInClassModalProps) {
   const { closeModal } = useModal();
-  const [students, setStudents] = useState(initialStudents);
-  const [removingStudentId, setRemovingStudentId] = useState<string | null>(
-    null,
+  const [students, setStudents] = useState(() =>
+    getPopulatedStudentsInClass(initialStudents),
   );
+  const [removingKey, setRemovingKey] = useState<string | null>(null);
   const { mutateAsync: removeStudent } = useRemoveStudentFromClass();
 
+  const enrollmentKey = (student: IStudentInClass) =>
+    `${getStudentInClassUserId(student)}-${getStudentInClassCourseId(student.course)}`;
+
   const handleRemove = async (studentId: string, courseId: string) => {
-    setRemovingStudentId(studentId);
+    const key = `${studentId}-${courseId}`;
+    setRemovingKey(key);
     try {
       await removeStudent({ classId, studentId, courseId });
       setStudents((prev) =>
-        prev.filter((s) => (s.user._id || s.user.id) !== studentId),
+        prev.filter(
+          (s) =>
+            !(
+              getStudentInClassUserId(s) === studentId &&
+              getStudentInClassCourseId(s.course) === courseId
+            ),
+        ),
       );
       if (students.length <= 1) {
         closeModal();
@@ -35,27 +50,30 @@ export function ViewStudentsInClassModal({
     } catch {
       // Keep list as-is on error
     } finally {
-      setRemovingStudentId(null);
+      setRemovingKey(null);
     }
   };
 
+  const validStudents = useMemo(
+    () => getPopulatedStudentsInClass(students),
+    [students],
+  );
+
   return (
     <div className="max-h-[60vh] overflow-y-auto">
-      {students.length === 0 ? (
+      {validStudents.length === 0 ? (
         <p className="text-sm text-gray-500 py-4 text-center">
           No students in this class yet.
         </p>
       ) : (
         <ul className="divide-y divide-gray-200">
-          {students.map((student) => {
-            const studentId = student.user._id || student.user.id;
-            const courseId = student.course.id;
-            const isRemoving = removingStudentId === studentId;
+          {validStudents.map((student) => {
+            const studentId = getStudentInClassUserId(student);
+            const courseId = getStudentInClassCourseId(student.course);
+            const key = enrollmentKey(student);
+            const isRemoving = removingKey === key;
             return (
-              <li
-                key={student._id || studentId}
-                className="py-3 flex items-center gap-3"
-              >
+              <li key={student._id || key} className="py-3 flex items-center gap-3">
                 <div className="flex-shrink-0 w-10 h-10 rounded-full bg-gray-200 overflow-hidden flex items-center justify-center">
                   {student.user.profilePicture ? (
                     <img

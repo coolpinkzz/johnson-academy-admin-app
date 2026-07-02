@@ -19,6 +19,31 @@ export interface IStudentInClass {
   course: ICourse;
 }
 
+/** Enrollment row with populated user and course (API may return null refs). */
+export function isPopulatedStudentInClass(
+  entry: unknown,
+): entry is IStudentInClass {
+  if (typeof entry !== "object" || entry == null) return false;
+  const row = entry as Partial<IStudentInClass>;
+  return row.user != null && row.course != null;
+}
+
+export function getPopulatedStudentsInClass(
+  studentsInClass: IClass["studentsInClass"] | undefined,
+): IStudentInClass[] {
+  return (studentsInClass ?? []).filter(isPopulatedStudentInClass);
+}
+
+export function getStudentInClassUserId(student: IStudentInClass): string {
+  return student.user._id || student.user.id;
+}
+
+export function getStudentInClassCourseId(
+  course: ICourse & { _id?: string },
+): string {
+  return course.id || course._id || "";
+}
+
 export interface IClass {
   id?: string;
   _id?: string;

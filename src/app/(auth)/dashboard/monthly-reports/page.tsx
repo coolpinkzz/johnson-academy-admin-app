@@ -4,7 +4,7 @@ import ProtectedRoute from "@/components/ProtectedRoute";
 import { useAuth } from "@/services/auth";
 import { getClasses } from "@/services/class";
 import { generateMonthlyReport, downloadReport } from "@/services/reports";
-import { ClassResponse, IClass, IStudentInClass } from "@/types/class";
+import { ClassResponse, IClass, getPopulatedStudentsInClass, getStudentInClassCourseId, getStudentInClassUserId } from "@/types/class";
 import {
   StudentEnrollmentOption,
 } from "@/types/reports";
@@ -24,27 +24,18 @@ import React, { useState, useMemo } from "react";
 function toEnrollmentOptions(
   studentsInClass: IClass["studentsInClass"] | undefined
 ): StudentEnrollmentOption[] {
-  if (!studentsInClass?.length) return [];
-
-  return studentsInClass
-    .filter(
-      (entry): entry is IStudentInClass =>
-        typeof entry === "object" && entry != null && "user" in entry && "course" in entry
-    )
-    .map((entry) => {
-      const studentId = entry.user._id || entry.user.id;
-      const courseId =
-        entry.course.id || (entry.course as { _id?: string })._id || "";
-      return {
-        enrollmentKey: `${studentId}-${courseId}`,
-        studentId,
-        studentName: entry.user.name,
-        studentEmail: entry.user.email,
-        courseId,
-        courseName: entry.course.name,
-      };
-    })
-    .filter((entry) => entry.studentId && entry.courseId);
+  return getPopulatedStudentsInClass(studentsInClass).map((entry) => {
+    const studentId = getStudentInClassUserId(entry);
+    const courseId = getStudentInClassCourseId(entry.course);
+    return {
+      enrollmentKey: `${studentId}-${courseId}`,
+      studentId,
+      studentName: entry.user.name,
+      studentEmail: entry.user.email,
+      courseId,
+      courseName: entry.course.name,
+    };
+  });
 }
 
 const MonthlyReportsPage = () => {

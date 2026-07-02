@@ -2,7 +2,7 @@
 
 import { useModal } from "@/hooks/use-modal";
 import { deleteClass } from "@/services/class";
-import { IClass, IStudentInClass, getClassDocumentId } from "@/types/class";
+import { IClass, getClassDocumentId, getPopulatedStudentsInClass } from "@/types/class";
 import { User } from "@/types/user";
 import { useQueryClient } from "@tanstack/react-query";
 import React, { useCallback } from "react";
@@ -97,10 +97,7 @@ export function useClassModals(): ClassModalsHandlers {
 
   const handleViewStudents = useCallback(
     (classItem: IClass) => {
-      const students: IStudentInClass[] = classItem.studentsInClass.filter(
-        (s: unknown): s is IStudentInClass =>
-          typeof s === "object" && s != null && "user" in s,
-      );
+      const students = getPopulatedStudentsInClass(classItem.studentsInClass);
       openModal({
         title: `Students - ${classItem.name}`,
         content: (
