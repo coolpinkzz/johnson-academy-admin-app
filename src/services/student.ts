@@ -5,6 +5,7 @@ import { AuthService } from "./auth";
 import { UserResponse, StudentInClass, User } from "@/types/user";
 import { StudentProgressResponse } from "@/types/progress";
 import { PAGE_SIZE } from "@/constant";
+import { looksLikeRollNumberSearch } from "@/lib/roll-number";
 
 export const useStudentsInfiniteQuery = (options?: {
   enabled?: boolean;
@@ -45,8 +46,13 @@ export const getStudents = async (params?: {
 };
 
 export const searchStudents = async (query: string): Promise<UserResponse> => {
+  const trimmed = query.trim();
+  const searchParam = looksLikeRollNumberSearch(trimmed)
+    ? `rollNumber=${encodeURIComponent(trimmed)}`
+    : `name=${encodeURIComponent(trimmed)}`;
+
   const response: ServerResponse<UserResponse> = await client(
-    `/users?role=student&name=${encodeURIComponent(query)}`,
+    `/users?role=student&${searchParam}`,
     {
       method: "GET",
       headers: {

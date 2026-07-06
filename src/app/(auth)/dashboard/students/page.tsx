@@ -203,7 +203,7 @@ const StudentsPage = () => {
                 <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400" />
                 <input
                   type="text"
-                  placeholder="Search by name..."
+                  placeholder="Search by name or roll number..."
                   value={searchQuery}
                   onChange={handleSearchChange}
                   className="w-full pl-10 pr-10 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
@@ -233,7 +233,7 @@ const StudentsPage = () => {
             </div>
             {searchQuery && (
               <div className="mt-3 text-sm text-gray-600">
-                Searching for roll number:{" "}
+                Searching for:{" "}
                 <span className="font-semibold">{searchQuery}</span>
               </div>
             )}
@@ -299,7 +299,7 @@ const StudentsPage = () => {
                   </p>
                   <p className="text-gray-500 mb-3">
                     {searchQuery
-                      ? `No student found with roll number "${searchQuery}"`
+                      ? `No student found matching "${searchQuery}"`
                       : "Get started by adding your first student"}
                   </p>
                   {searchQuery && (

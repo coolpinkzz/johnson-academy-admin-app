@@ -8,6 +8,11 @@ import { uploadProfilePicture } from "@/services/upload";
 import { User } from "@/types/user";
 import { UpdateProfileData } from "@/services/student";
 import { Eye, EyeOff } from "lucide-react";
+import {
+  isValidRollNumber,
+  ROLL_NUMBER_ERROR_MESSAGE,
+  ROLL_NUMBER_PLACEHOLDER,
+} from "@/lib/roll-number";
 
 export interface EditProfileFormData {
   name: string;
@@ -54,6 +59,7 @@ export function EditProfileForm({
   const [showPassword, setShowPassword] = useState(false);
   const [errors, setErrors] = useState<Partial<Record<keyof EditProfileFormData, string>>>({});
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const initialRollNumber = (student.rollNumber || "").trim();
 
   useEffect(() => {
     setProfilePreview(student.profilePicture || "");
@@ -83,6 +89,12 @@ export function EditProfileForm({
 
     if (formData.phoneNumber && !PHONE_PATTERN.test(formData.phoneNumber)) {
       newErrors.phoneNumber = "Please enter a valid phone number";
+    }
+
+    const trimmedRollNumber = formData.rollNumber.trim();
+    const rollNumberChanged = trimmedRollNumber !== initialRollNumber;
+    if (trimmedRollNumber && rollNumberChanged && !isValidRollNumber(trimmedRollNumber)) {
+      newErrors.rollNumber = ROLL_NUMBER_ERROR_MESSAGE;
     }
 
     setErrors(newErrors);
@@ -319,7 +331,7 @@ export function EditProfileForm({
           value={formData.rollNumber}
           onChange={(e) => handleInputChange("rollNumber", e.target.value)}
           className={errors.rollNumber ? "border-red-500" : ""}
-          placeholder="e.g. JA/GTR/1234"
+          placeholder={ROLL_NUMBER_PLACEHOLDER}
         />
         {errors.rollNumber && (
           <p className="text-sm text-red-600 mt-1">{errors.rollNumber}</p>

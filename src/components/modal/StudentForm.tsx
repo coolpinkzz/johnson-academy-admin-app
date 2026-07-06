@@ -11,6 +11,11 @@ import { useModal } from "@/hooks/use-modal";
 import { Eye, EyeOff } from "lucide-react";
 import { toast } from "react-toastify";
 import { AxiosError } from "axios";
+import {
+  isValidRollNumber,
+  ROLL_NUMBER_ERROR_MESSAGE,
+  ROLL_NUMBER_PLACEHOLDER,
+} from "@/lib/roll-number";
 
 interface StudentFormData {
   email: string;
@@ -78,10 +83,13 @@ export function StudentForm({
       newErrors.phoneNumber = "Please enter a valid phone number";
     }
 
-    // Roll number validation (required)
-    if (type === "student" && !formData.rollNumber.trim()) {
-      if (type === "student") {
+    // Roll number validation (required for students)
+    if (type === "student") {
+      const trimmedRollNumber = formData.rollNumber.trim();
+      if (!trimmedRollNumber) {
         newErrors.rollNumber = "Roll number is required";
+      } else if (!isValidRollNumber(trimmedRollNumber)) {
+        newErrors.rollNumber = ROLL_NUMBER_ERROR_MESSAGE;
       }
     }
 
@@ -140,6 +148,7 @@ export function StudentForm({
       }
       await mutateAsync({
         ...formData,
+        rollNumber: formData.rollNumber.trim(),
         profilePicture: profileUrl || "",
       });
     }
@@ -343,15 +352,22 @@ export function StudentForm({
       {/* Roll Number Field */}
       <div>
         <label className="block text-sm font-medium text-gray-700 mb-1">
-          {type === "student" ? "Student Roll Number" : "Employee ID"}
+          {type === "student" ? "Student Roll Number *" : "Employee ID"}
         </label>
         <Input
           type="text"
           value={formData.rollNumber}
           onChange={(e) => handleInputChange("rollNumber", e.target.value)}
           className={errors.rollNumber ? "border-red-500" : ""}
-          placeholder={type === "student" ? "JA/GTR/1234" : "Enter employee ID"}
+          placeholder={
+            type === "student" ? ROLL_NUMBER_PLACEHOLDER : "Enter employee ID"
+          }
         />
+        {type === "student" && !errors.rollNumber && (
+          <p className="text-xs text-gray-500 mt-1">
+            New students use JA/MMYY/NNNN (e.g. JA/0726/3072).
+          </p>
+        )}
         {errors.rollNumber && (
           <p className="text-sm text-red-600 mt-1">{errors.rollNumber}</p>
         )}
