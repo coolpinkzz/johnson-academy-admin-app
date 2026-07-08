@@ -11,6 +11,7 @@ import { useAuth } from "@/services/auth";
 import { deleteCourse, getCourses } from "@/services/course";
 import { CourseResponse } from "@/types/course";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
+import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import {
   Bell,
   Plus,
@@ -22,12 +23,16 @@ import {
   GraduationCap,
   Music,
 } from "lucide-react";
-import React from "react";
+import React, { useMemo } from "react";
 
 const CoursesPage = () => {
   const { user } = useAuth();
   const { openModal, closeModal } = useModal();
   const queryClient = useQueryClient();
+  const router = useRouter();
+  const pathname = usePathname();
+  const searchParams = useSearchParams();
+  const nameQuery = searchParams.get("name") ?? "";
   // get all courses
   const {
     data: coursesData,
@@ -74,6 +79,34 @@ const CoursesPage = () => {
     });
   };
 
+  const filteredCourses = useMemo(() => {
+    const normalizedQuery = nameQuery.trim().toLowerCase();
+
+    if (!normalizedQuery) {
+      return coursesData?.results ?? [];
+    }
+
+    return (coursesData?.results ?? []).filter((course) =>
+      course.name.toLowerCase().includes(normalizedQuery),
+    );
+  }, [coursesData?.results, nameQuery]);
+
+  const handleSearchChange = (value: string) => {
+    const params = new URLSearchParams(searchParams.toString());
+    const trimmedValue = value.trim();
+
+    if (trimmedValue) {
+      params.set("name", trimmedValue);
+    } else {
+      params.delete("name");
+    }
+
+    const queryString = params.toString();
+    router.replace(queryString ? `${pathname}?${queryString}` : pathname, {
+      scroll: false,
+    });
+  };
+
   return (
     <ProtectedRoute>
       <div className="flex flex-col h-full">
@@ -108,6 +141,8 @@ const CoursesPage = () => {
                 <input
                   type="text"
                   placeholder="Search courses..."
+                  value={nameQuery}
+                  onChange={(e) => handleSearchChange(e.target.value)}
                   className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent text-sm sm:text-base"
                 />
               </div>
@@ -116,7 +151,7 @@ const CoursesPage = () => {
 
           {/* Courses Grid */}
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 sm:gap-6">
-            {coursesData?.results.map((course) => (
+            {filteredCourses.map((course) => (
               <div
                 key={course.id || course.name}
                 className="bg-white rounded-lg shadow-sm border overflow-hidden flex flex-col"

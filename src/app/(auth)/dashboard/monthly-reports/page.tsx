@@ -4,13 +4,18 @@ import ProtectedRoute from "@/components/ProtectedRoute";
 import { useAuth } from "@/services/auth";
 import { getClasses } from "@/services/class";
 import { generateMonthlyReport, downloadReport } from "@/services/reports";
-import { ClassResponse, IClass, getPopulatedStudentsInClass, getStudentInClassCourseId, getStudentInClassUserId } from "@/types/class";
 import {
-  StudentEnrollmentOption,
-} from "@/types/reports";
+  ClassResponse,
+  IClass,
+  getPopulatedStudentsInClass,
+  getStudentInClassCourseId,
+  getStudentInClassUserId,
+} from "@/types/class";
+import { StudentEnrollmentOption } from "@/types/reports";
 import { useQuery } from "@tanstack/react-query";
 import {
   Bell,
+  Search,
   Download,
   Calendar,
   Users,
@@ -22,7 +27,7 @@ import {
 import React, { useState, useMemo } from "react";
 
 function toEnrollmentOptions(
-  studentsInClass: IClass["studentsInClass"] | undefined
+  studentsInClass: IClass["studentsInClass"] | undefined,
 ): StudentEnrollmentOption[] {
   return getPopulatedStudentsInClass(studentsInClass).map((entry) => {
     const studentId = getStudentInClassUserId(entry);
@@ -49,6 +54,7 @@ const MonthlyReportsPage = () => {
   const [showClassDropdown, setShowClassDropdown] = useState(false);
   const [showStudentDropdown, setShowStudentDropdown] = useState(false);
   const [showMonthDropdown, setShowMonthDropdown] = useState(false);
+  const [classSearch, setClassSearch] = useState("");
 
   const {
     data: classesData,
@@ -61,7 +67,7 @@ const MonthlyReportsPage = () => {
 
   const enrollments = useMemo(
     () => toEnrollmentOptions(selectedClass?.studentsInClass),
-    [selectedClass]
+    [selectedClass],
   );
 
   const months = useMemo(() => {
@@ -80,11 +86,25 @@ const MonthlyReportsPage = () => {
     return monthsList;
   }, []);
 
+  const filteredClasses = useMemo(() => {
+    const normalizedQuery = classSearch.trim().toLowerCase();
+    const classes = classesData?.results ?? [];
+
+    if (!normalizedQuery) {
+      return classes;
+    }
+
+    return classes.filter((classItem) =>
+      classItem.name.toLowerCase().includes(normalizedQuery),
+    );
+  }, [classSearch, classesData?.results]);
+
   const handleClassSelect = (classItem: IClass) => {
     setSelectedClass(classItem);
     setSelectedEnrollment(null);
     setReportUrl(null);
     setShowClassDropdown(false);
+    setClassSearch("");
   };
 
   const handleEnrollmentSelect = (enrollment: StudentEnrollmentOption) => {
@@ -132,8 +152,7 @@ const MonthlyReportsPage = () => {
     }
   };
 
-  const isFormValid =
-    selectedClass && selectedEnrollment && selectedMonth;
+  const isFormValid = selectedClass && selectedEnrollment && selectedMonth;
 
   return (
     <ProtectedRoute>
@@ -189,6 +208,19 @@ const MonthlyReportsPage = () => {
 
                     {showClassDropdown && (
                       <div className="absolute z-10 w-full mt-1 bg-white border border-gray-300 rounded-lg shadow-lg max-h-60 overflow-auto">
+                        <div className="sticky top-0 bg-white border-b border-gray-200 p-2">
+                          <div className="relative">
+                            <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-gray-400 pointer-events-none" />
+                            <input
+                              type="search"
+                              value={classSearch}
+                              onChange={(e) => setClassSearch(e.target.value)}
+                              placeholder="Search classes..."
+                              className="w-full rounded-md border border-gray-300 py-2 pl-9 pr-3 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+                              autoComplete="off"
+                            />
+                          </div>
+                        </div>
                         {classesLoading ? (
                           <div className="p-3 text-center text-gray-500">
                             Loading classes...
@@ -201,8 +233,12 @@ const MonthlyReportsPage = () => {
                           <div className="p-3 text-center text-gray-500">
                             No classes found
                           </div>
+                        ) : filteredClasses.length === 0 ? (
+                          <div className="p-3 text-center text-gray-500">
+                            No classes match "{classSearch.trim()}"
+                          </div>
                         ) : (
-                          classesData?.results?.map((classItem) => (
+                          filteredClasses.map((classItem) => (
                             <button
                               key={classItem.id || classItem._id}
                               onClick={() => handleClassSelect(classItem)}
@@ -270,7 +306,8 @@ const MonthlyReportsPage = () => {
                                     {enrollment.studentName}
                                   </div>
                                   <div className="text-sm text-gray-500">
-                                    {enrollment.courseName} · {enrollment.studentEmail}
+                                    {enrollment.courseName} ·{" "}
+                                    {enrollment.studentEmail}
                                   </div>
                                 </div>
                               </div>

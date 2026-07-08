@@ -93,10 +93,10 @@ const DashboardPage = () => {
             </p>
           </div>
           <div className="flex items-center gap-4">
-            <button className="relative p-2 text-gray-600 hover:text-gray-900 hover:bg-gray-100 rounded-lg transition">
+            {/* <button className="relative p-2 text-gray-600 hover:text-gray-900 hover:bg-gray-100 rounded-lg transition">
               <Bell className="h-5 w-5" />
               <span className="absolute top-1 right-1 h-2 w-2 bg-red-500 rounded-full"></span>
-            </button>
+            </button> */}
             <div className="h-9 w-9 rounded-full bg-indigo-600 flex items-center justify-center text-white font-medium">
               {user?.name?.charAt(0) || "A"}
             </div>
@@ -133,8 +133,8 @@ const DashboardPage = () => {
 
             {aggregatesError ? (
               <div className="rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-800">
-                Couldn&apos;t load overview stats. Check that the aggregates
-                API is available and you&apos;re signed in.
+                Couldn&apos;t load overview stats. Check that the aggregates API
+                is available and you&apos;re signed in.
               </div>
             ) : (
               <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-4">
