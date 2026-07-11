@@ -16,7 +16,13 @@ export function getRollNumberPrefix(date: Date = new Date()): string {
 }
 
 export function looksLikeRollNumberSearch(query: string): boolean {
-  return query.trim().toUpperCase().startsWith("JA/");
+  const trimmed = query.trim();
+  if (!trimmed) return false;
+
+  if (trimmed.toUpperCase().startsWith("JA/")) {
+    return true;
+  }
+  return /^\d+$/.test(trimmed);
 }
 
 export function suggestNextRollNumber(

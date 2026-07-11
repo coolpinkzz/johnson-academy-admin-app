@@ -1,9 +1,5 @@
 /* eslint-disable import/no-unresolved */
-import axios, {
-  AxiosError,
-  AxiosRequestConfig,
-  AxiosResponse,
-} from "axios";
+import axios, { AxiosError, AxiosRequestConfig, AxiosResponse } from "axios";
 import type { RequestData, ServerResponse } from "../models/common/client";
 import AuthService from "./auth";
 
@@ -17,11 +13,14 @@ const isPublicAuthRequest = (url?: string): boolean => {
 httpClient.interceptors.response.use(
   (response) => response,
   (error: AxiosError) => {
-    if (error.response?.status === 401 && !isPublicAuthRequest(error.config?.url)) {
+    if (
+      error.response?.status === 401 &&
+      !isPublicAuthRequest(error.config?.url)
+    ) {
       AuthService.handleSessionExpired();
     }
     return Promise.reject(error);
-  }
+  },
 );
 
 /**
@@ -49,8 +48,9 @@ const client = async <T, U>(
     email,
     isFormData,
     ...rest
-  }: RequestData<U> = {}
+  }: RequestData<U> = {},
 ): Promise<ServerResponse<T>> => {
+  console.log("customBaseUrl", customBaseUrl);
   const finalHeaders = {
     ...headers,
     ...(isFormData ? {} : { "Content-Type": "application/json" }),
@@ -79,7 +79,7 @@ const client = async <T, U>(
           return resp.items;
         }
         return resp;
-      }
+      },
     ),
     ...rest,
   };

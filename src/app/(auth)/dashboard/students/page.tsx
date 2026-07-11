@@ -332,10 +332,10 @@ const StudentsPage = () => {
                   <tbody className="bg-white divide-y divide-gray-200">
                     {students.results.map((student) => (
                       <tr
-                          key={student.id}
-                          onClick={() => handleViewClick(student)}
-                          className="hover:bg-gray-50 cursor-pointer"
-                        >
+                        key={student.id}
+                        onClick={() => handleViewClick(student)}
+                        className="hover:bg-gray-50 cursor-pointer"
+                      >
                         <td className="px-6 py-4 whitespace-nowrap">
                           <div className="flex items-center">
                             <div className="h-10 w-10 rounded-full overflow-hidden shrink-0">
@@ -364,7 +364,10 @@ const StudentsPage = () => {
                         </td>
 
                         <td className="px-6 py-4 whitespace-nowrap text-sm font-medium">
-                          <div className="flex items-center gap-2" onClick={(e) => e.stopPropagation()}>
+                          <div
+                            className="flex items-center gap-2"
+                            onClick={(e) => e.stopPropagation()}
+                          >
                             <button
                               onClick={() => handleViewClick(student)}
                               className="text-blue-600 hover:text-blue-800 flex items-center gap-1 hover:bg-blue-50 px-2 py-1 rounded transition-colors"

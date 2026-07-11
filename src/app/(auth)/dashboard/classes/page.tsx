@@ -13,10 +13,20 @@ import {
 } from "@/types/class";
 import { useQuery } from "@tanstack/react-query";
 import { Plus, Search, Users, BookOpen, User as UserIcon } from "lucide-react";
+import { cn } from "@/lib/utils";
 import { useCallback, useMemo, useState } from "react";
+
+function getClassNamePrefix(name: string): string {
+  const trimmed = name.trim();
+  if (!trimmed) return "";
+
+  const slashIndex = trimmed.indexOf("/");
+  return slashIndex === -1 ? trimmed : trimmed.slice(0, slashIndex);
+}
 
 const ClassesPage = () => {
   const [searchTerm, setSearchTerm] = useState("");
+  const [selectedPrefix, setSelectedPrefix] = useState<string | null>(null);
   const {
     handleClassForm,
     handleEditClass,
@@ -80,8 +90,31 @@ const ClassesPage = () => {
 
   const TEACHER_STACK_MAX = 5;
 
+  const classPrefixes = useMemo(() => {
+    const prefixes = new Set<string>();
+
+    for (const classItem of classesData?.results ?? []) {
+      const prefix = getClassNamePrefix(classItem.name || "");
+      if (prefix) {
+        prefixes.add(prefix);
+      }
+    }
+
+    return Array.from(prefixes).sort((a, b) =>
+      a.localeCompare(b, undefined, { numeric: true }),
+    );
+  }, [classesData?.results]);
+
   const filteredClasses = useMemo(() => {
-    const list = classesData?.results ?? [];
+    let list = classesData?.results ?? [];
+
+    if (selectedPrefix) {
+      list = list.filter(
+        (classItem) =>
+          getClassNamePrefix(classItem.name || "") === selectedPrefix,
+      );
+    }
+
     const query = searchTerm.trim().toLowerCase();
     if (!query) return list;
 
@@ -101,7 +134,9 @@ const ClassesPage = () => {
         instrument.includes(query)
       );
     });
-  }, [classesData?.results, searchTerm, getTeacherDisplayName]);
+  }, [classesData?.results, searchTerm, selectedPrefix, getTeacherDisplayName]);
+
+  const hasActiveFilters = Boolean(searchTerm.trim() || selectedPrefix);
 
   if (isLoading) {
     return (
@@ -151,8 +186,8 @@ const ClassesPage = () => {
         <main className="flex-1 overflow-auto sm:py-6 sm:px-6 px-0 py-6">
           {/* Search and Filters */}
           <div className="bg-white rounded-lg shadow-sm border p-4 sm:p-6 mb-6">
-            <div className="flex flex-col sm:flex-row gap-4">
-              <div className="flex-1 relative">
+            <div className="flex flex-col lg:flex-row lg:items-center gap-4">
+              <div className="flex-1 relative min-w-0">
                 <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-400" />
                 <input
                   type="text"
@@ -162,147 +197,177 @@ const ClassesPage = () => {
                   className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent text-sm sm:text-base"
                 />
               </div>
+              {classPrefixes.length > 0 && (
+                <div className="flex flex-wrap items-center gap-2">
+                  {classPrefixes.map((prefix) => {
+                    const isActive = selectedPrefix === prefix;
+
+                    return (
+                      <button
+                        key={prefix}
+                        type="button"
+                        onClick={() =>
+                          setSelectedPrefix((current) =>
+                            current === prefix ? null : prefix,
+                          )
+                        }
+                        className={cn(
+                          "px-3 py-1.5 rounded-lg text-sm font-medium border transition-colors",
+                          isActive
+                            ? "bg-blue-600 text-white border-blue-600"
+                            : "bg-white text-gray-700 border-gray-300 hover:bg-gray-50",
+                        )}
+                      >
+                        {prefix}
+                      </button>
+                    );
+                  })}
+                </div>
+              )}
             </div>
           </div>
 
           {/* Classes Grid */}
           {filteredClasses.length > 0 && (
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 sm:gap-6">
-            {filteredClasses.map((classItem) => {
-              const teacherList = getClassTeacherList(classItem);
-              const teachersLabel = formatTeacherNames(teacherList);
-              const teacherAvatars = teacherList.map((t) =>
-                resolveTeacherAvatar(t),
-              );
-              const visibleAvatars = teacherAvatars.slice(0, TEACHER_STACK_MAX);
-              const overflowCount = teacherAvatars.length - TEACHER_STACK_MAX;
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 sm:gap-6">
+              {filteredClasses.map((classItem) => {
+                const teacherList = getClassTeacherList(classItem);
+                const teachersLabel = formatTeacherNames(teacherList);
+                const teacherAvatars = teacherList.map((t) =>
+                  resolveTeacherAvatar(t),
+                );
+                const visibleAvatars = teacherAvatars.slice(
+                  0,
+                  TEACHER_STACK_MAX,
+                );
+                const overflowCount = teacherAvatars.length - TEACHER_STACK_MAX;
 
-              return (
-              <div
-                key={getClassDocumentId(classItem) ?? classItem.name}
-                className="bg-white rounded-lg shadow-sm border overflow-hidden flex flex-col"
-              >
-                <div className="p-4 sm:p-6 flex-1">
-                  <div className="flex items-center justify-between mb-4 gap-3">
-                    <div className="flex min-w-0 flex-1 items-center">
-                      {teacherAvatars.length === 0 ? (
-                        <div
-                          className="flex h-12 w-12 shrink-0 items-center justify-center rounded-full bg-blue-100 text-lg font-medium text-blue-600"
-                          title="No teachers"
-                        >
-                          ?
-                        </div>
-                      ) : (
-                        <div className="flex items-center pr-1">
-                          <div className="flex -space-x-2">
-                            {visibleAvatars.map((a, index) => (
-                              <div
-                                key={a.id}
-                                className="relative inline-flex h-12 w-12 shrink-0 rounded-full bg-gray-100 ring-2 ring-white"
-                                style={{
-                                  zIndex: visibleAvatars.length - index,
-                                }}
-                                title={getTeacherDisplayName(
-                                  teacherList[index]!,
-                                )}
-                              >
-                                {a.src ? (
-                                  <img
-                                    src={a.src}
-                                    alt=""
-                                    className="h-full w-full rounded-full object-cover"
-                                  />
-                                ) : (
-                                  <span className="flex h-full w-full items-center justify-center rounded-full bg-blue-600 text-sm font-medium text-white">
-                                    {a.initial}
-                                  </span>
-                                )}
-                              </div>
-                            ))}
-                            {overflowCount > 0 ? (
-                              <div
-                                className="relative z-50 flex h-12 w-12 shrink-0 items-center justify-center rounded-full bg-gray-200 text-xs font-semibold text-gray-800 ring-2 ring-white"
-                                title={`${overflowCount} more teacher${overflowCount === 1 ? "" : "s"}`}
-                              >
-                                +{overflowCount}
-                              </div>
-                            ) : null}
-                          </div>
-                        </div>
-                      )}
-                    </div>
-                    <span className="text-xs text-gray-500 bg-gray-100 px-2 py-1 rounded">
-                      {typeof classItem.courseId === "string"
-                        ? ""
-                        : classItem.courseId?.instrument || ""}
-                    </span>
-                  </div>
-
-                  <h3 className="text-base sm:text-lg font-semibold text-gray-900 mb-2">
-                    {classItem?.name}
-                  </h3>
-
-                  <div className="space-y-3 mb-4">
-                    <div className="flex items-start gap-2 text-sm text-gray-600">
-                      <UserIcon className="h-4 w-4 text-blue-500 shrink-0 mt-0.5" />
-                      <span className="min-w-0 break-words">
-                        <span className="font-medium text-gray-700">
-                          Teachers:{" "}
-                        </span>
-                        {teachersLabel}
-                      </span>
-                    </div>
-
-                    <div className="flex items-center gap-2 text-sm text-gray-600">
-                      <Users className="h-4 w-4 text-purple-500" />
-                      <span>
-                        Students: {classItem?.studentsInClass?.length}
-                      </span>
-                    </div>
-                  </div>
-                </div>
-
-                <div className="px-4 sm:px-6 py-3 bg-gray-50 border-t flex flex-wrap gap-4">
-                  <button
-                    onClick={() => handleViewStudents(classItem)}
-                    className="text-blue-600 hover:text-blue-800 text-sm font-medium"
+                return (
+                  <div
+                    key={getClassDocumentId(classItem) ?? classItem.name}
+                    className="bg-white rounded-lg shadow-sm border overflow-hidden flex flex-col"
                   >
-                    View Students
-                  </button>
-                  {/* <button
+                    <div className="p-4 sm:p-6 flex-1">
+                      <div className="flex items-center justify-between mb-4 gap-3">
+                        <div className="flex min-w-0 flex-1 items-center">
+                          {teacherAvatars.length === 0 ? (
+                            <div
+                              className="flex h-12 w-12 shrink-0 items-center justify-center rounded-full bg-blue-100 text-lg font-medium text-blue-600"
+                              title="No teachers"
+                            >
+                              ?
+                            </div>
+                          ) : (
+                            <div className="flex items-center pr-1">
+                              <div className="flex -space-x-2">
+                                {visibleAvatars.map((a, index) => (
+                                  <div
+                                    key={a.id}
+                                    className="relative inline-flex h-12 w-12 shrink-0 rounded-full bg-gray-100 ring-2 ring-white"
+                                    style={{
+                                      zIndex: visibleAvatars.length - index,
+                                    }}
+                                    title={getTeacherDisplayName(
+                                      teacherList[index]!,
+                                    )}
+                                  >
+                                    {a.src ? (
+                                      <img
+                                        src={a.src}
+                                        alt=""
+                                        className="h-full w-full rounded-full object-cover"
+                                      />
+                                    ) : (
+                                      <span className="flex h-full w-full items-center justify-center rounded-full bg-blue-600 text-sm font-medium text-white">
+                                        {a.initial}
+                                      </span>
+                                    )}
+                                  </div>
+                                ))}
+                                {overflowCount > 0 ? (
+                                  <div
+                                    className="relative z-50 flex h-12 w-12 shrink-0 items-center justify-center rounded-full bg-gray-200 text-xs font-semibold text-gray-800 ring-2 ring-white"
+                                    title={`${overflowCount} more teacher${overflowCount === 1 ? "" : "s"}`}
+                                  >
+                                    +{overflowCount}
+                                  </div>
+                                ) : null}
+                              </div>
+                            </div>
+                          )}
+                        </div>
+                        <span className="text-xs text-gray-500 bg-gray-100 px-2 py-1 rounded">
+                          {typeof classItem.courseId === "string"
+                            ? ""
+                            : classItem.courseId?.instrument || ""}
+                        </span>
+                      </div>
+
+                      <h3 className="text-base sm:text-lg font-semibold text-gray-900 mb-2">
+                        {classItem?.name}
+                      </h3>
+
+                      <div className="space-y-3 mb-4">
+                        <div className="flex items-start gap-2 text-sm text-gray-600">
+                          <UserIcon className="h-4 w-4 text-blue-500 shrink-0 mt-0.5" />
+                          <span className="min-w-0 break-words">
+                            <span className="font-medium text-gray-700">
+                              Teachers:{" "}
+                            </span>
+                            {teachersLabel}
+                          </span>
+                        </div>
+
+                        <div className="flex items-center gap-2 text-sm text-gray-600">
+                          <Users className="h-4 w-4 text-purple-500" />
+                          <span>
+                            Students: {classItem?.studentsInClass?.length}
+                          </span>
+                        </div>
+                      </div>
+                    </div>
+
+                    <div className="px-4 sm:px-6 py-3 bg-gray-50 border-t flex flex-wrap gap-4">
+                      <button
+                        onClick={() => handleViewStudents(classItem)}
+                        className="text-blue-600 hover:text-blue-800 text-sm font-medium"
+                      >
+                        View Students
+                      </button>
+                      {/* <button
                     onClick={() => handleBulkAddStudents(classItem)}
                     className="text-blue-600 hover:text-blue-800 text-sm font-medium"
                   >
                     Add Students
                   </button> */}
-                  <button
-                    onClick={() => handleAddStudent(classItem)}
-                    className="text-blue-600 hover:text-blue-800 text-sm font-medium"
-                  >
-                    Add Student
-                  </button>
-                  <button
-                    onClick={() => handleEditClass(classItem)}
-                    className="text-green-600 hover:text-green-800 text-sm font-medium"
-                  >
-                    Edit
-                  </button>
-                  <button
-                    onClick={() =>
-                      handleDeleteClass(
-                        getClassDocumentId(classItem) || "",
-                        classItem.name,
-                      )
-                    }
-                    className="text-red-600 hover:text-red-800 text-sm font-medium"
-                  >
-                    Delete
-                  </button>
-                </div>
-              </div>
-            );
-            })}
-          </div>
+                      <button
+                        onClick={() => handleAddStudent(classItem)}
+                        className="text-blue-600 hover:text-blue-800 text-sm font-medium"
+                      >
+                        Add Student
+                      </button>
+                      <button
+                        onClick={() => handleEditClass(classItem)}
+                        className="text-green-600 hover:text-green-800 text-sm font-medium"
+                      >
+                        Edit
+                      </button>
+                      <button
+                        onClick={() =>
+                          handleDeleteClass(
+                            getClassDocumentId(classItem) || "",
+                            classItem.name,
+                          )
+                        }
+                        className="text-red-600 hover:text-red-800 text-sm font-medium"
+                      >
+                        Delete
+                      </button>
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
           )}
 
           {/* Empty State */}
@@ -310,14 +375,18 @@ const ClassesPage = () => {
             <div className="text-center py-12">
               <BookOpen className="mx-auto h-12 w-12 text-gray-400" />
               <h3 className="mt-2 text-sm font-medium text-gray-900">
-                {searchTerm.trim() ? "No classes found" : "No classes"}
+                {hasActiveFilters ? "No classes found" : "No classes"}
               </h3>
               <p className="mt-1 text-sm text-gray-500">
-                {searchTerm.trim()
-                  ? `No classes found matching "${searchTerm.trim()}"`
+                {hasActiveFilters
+                  ? selectedPrefix && searchTerm.trim()
+                    ? `No classes found for ${selectedPrefix} matching "${searchTerm.trim()}"`
+                    : selectedPrefix
+                      ? `No classes found for ${selectedPrefix}`
+                      : `No classes found matching "${searchTerm.trim()}"`
                   : "Get started by creating your first class."}
               </p>
-              {!searchTerm.trim() && (
+              {!hasActiveFilters && (
                 <div className="mt-6">
                   <button
                     onClick={handleClassForm}
