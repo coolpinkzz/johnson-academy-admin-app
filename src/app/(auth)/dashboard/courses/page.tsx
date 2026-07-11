@@ -23,9 +23,9 @@ import {
   GraduationCap,
   Music,
 } from "lucide-react";
-import React, { useMemo } from "react";
+import React, { Suspense, useMemo } from "react";
 
-const CoursesPage = () => {
+const CoursesPageContent = () => {
   const { user } = useAuth();
   const { openModal, closeModal } = useModal();
   const queryClient = useQueryClient();
@@ -233,5 +233,19 @@ const CoursesPage = () => {
     </ProtectedRoute>
   );
 };
+
+const CoursesPage = () => (
+  <Suspense
+    fallback={
+      <ProtectedRoute>
+        <div className="flex h-full items-center justify-center">
+          <p className="text-sm text-gray-500">Loading courses...</p>
+        </div>
+      </ProtectedRoute>
+    }
+  >
+    <CoursesPageContent />
+  </Suspense>
+);
 
 export default CoursesPage;
