@@ -21,7 +21,7 @@ export const getTeachers = async (): Promise<UserResponse> => {
         Authorization: `Bearer ${AuthService.getAccessToken()}`,
       },
       page: 1,
-      limit: 100,
+      limit: 200,
     },
   );
 

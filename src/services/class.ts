@@ -7,11 +7,7 @@ import {
 import { AuthService } from "./auth";
 import { client } from "./api-client";
 import { ServerResponse } from "@/models/common/client";
-import {
-  useMutation,
-  useQuery,
-  useQueryClient,
-} from "@tanstack/react-query";
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { toast } from "react-toastify";
 import { AxiosError } from "axios";
 
@@ -23,7 +19,7 @@ export const getClasses = async (): Promise<ClassResponse> => {
         Authorization: `Bearer ${AuthService.getAccessToken()}`,
       },
       page: 1,
-      limit: 100,
+      limit: 200,
     });
 
     return response as unknown as ClassResponse;
