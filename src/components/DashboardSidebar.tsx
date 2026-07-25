@@ -2,20 +2,12 @@
 
 import { useAuth } from "@/services/auth";
 import {
-  BarChart3,
+  ArrowLeftRight,
   BookOpen,
-  Calendar,
   GraduationCap,
   Home,
-  Menu,
-  Settings,
   Users,
-  FileText,
-  Award,
   Clock,
-  TrendingUp,
-  MessageSquare,
-  Bell,
   ChevronLeft,
   ChevronRight,
   FileBarChart,
@@ -73,6 +65,11 @@ const sidebarItems: SidebarItem[] = [
     title: "Attendance",
     href: "/dashboard/attendance",
     icon: <Clock className="h-4 w-4" />,
+  },
+  {
+    title: "Compensation",
+    href: "/dashboard/compensation",
+    icon: <ArrowLeftRight className="h-4 w-4" />,
   },
   {
     title: "Monthly Reports",

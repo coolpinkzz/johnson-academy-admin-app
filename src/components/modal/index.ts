@@ -22,6 +22,11 @@ export { ClassForm } from "./ClassForm";
 export { BulkAddStudentsModal } from "./BulkAddStudentsModal";
 export { AddSingleStudentToClassModal } from "./AddSingleStudentToClassModal";
 export { default as StudentProgressModal } from "./StudentProgressModal";
+export { BookCompensationModal } from "./BookCompensationModal";
+export {
+  CompensationBookingDetail,
+  CompensationStatusBadge,
+} from "./CompensationBookingDetail";
 
 // Dialog Components
 export {

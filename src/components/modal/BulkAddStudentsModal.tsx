@@ -5,8 +5,9 @@ import { Button } from "@/components/ui/button";
 import { bulkAddStudents } from "@/services/class";
 import { searchStudents } from "@/services/student";
 import { useModal } from "../modal";
-import { UserResponse } from "@/types/user";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { toast } from "react-toastify";
+import { AxiosError } from "axios";
 
 interface BulkAddStudentsModalProps {
   classId: string;
@@ -40,7 +41,10 @@ export function BulkAddStudentsModal({
       closeModal();
     },
     onError: (error) => {
-      console.error("Error adding students to class:", error);
+      const ax = error as AxiosError<{ message?: string }>;
+      toast.error(
+        ax.response?.data?.message || "Error adding students to class",
+      );
     },
   });
 

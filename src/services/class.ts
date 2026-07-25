@@ -2,6 +2,7 @@ import {
   ClassFormData,
   ClassResponse,
   ClassesByTeacherResponse,
+  GetClassesParams,
   IClass,
 } from "@/types/class";
 import { AuthService } from "./auth";
@@ -11,22 +12,73 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { toast } from "react-toastify";
 import { AxiosError } from "axios";
 
-export const getClasses = async (): Promise<ClassResponse> => {
+function buildClassesSearchParams(params?: GetClassesParams): URLSearchParams {
+  const searchParams = new URLSearchParams();
+
+  if (params?.page != null) searchParams.set("page", String(params.page));
+  if (params?.limit != null) searchParams.set("limit", String(params.limit));
+  if (params?.name) searchParams.set("name", params.name);
+  if (params?.code) searchParams.set("code", params.code);
+  if (params?.status) searchParams.set("status", params.status);
+  if (params?.branch) searchParams.set("branch", params.branch);
+  if (params?.gradeLevel) searchParams.set("gradeLevel", params.gradeLevel);
+  if (params?.academicYear)
+    searchParams.set("academicYear", params.academicYear);
+  if (params?.allowsCompensationInbound != null) {
+    searchParams.set(
+      "allowsCompensationInbound",
+      String(params.allowsCompensationInbound),
+    );
+  }
+  if (params?.allowsCompensationOutbound != null) {
+    searchParams.set(
+      "allowsCompensationOutbound",
+      String(params.allowsCompensationOutbound),
+    );
+  }
+  if (params?.teacherId) searchParams.set("teacherId", params.teacherId);
+  if (params?.courseId) searchParams.set("courseId", params.courseId);
+
+  return searchParams;
+}
+
+export const getClasses = async (
+  params?: GetClassesParams,
+): Promise<ClassResponse> => {
   try {
-    const response: ServerResponse<ClassResponse> = await client("/classes", {
-      method: "GET",
-      headers: {
-        Authorization: `Bearer ${AuthService.getAccessToken()}`,
-      },
+    const searchParams = buildClassesSearchParams({
       page: 1,
       limit: 200,
+      ...params,
     });
+    const qs = searchParams.toString();
+    const response: ServerResponse<ClassResponse> = await client(
+      `/classes${qs ? `?${qs}` : ""}`,
+      {
+        method: "GET",
+        headers: {
+          Authorization: `Bearer ${AuthService.getAccessToken()}`,
+        },
+      },
+    );
 
     return response as unknown as ClassResponse;
   } catch (error) {
     console.error("Error fetching classes:", error);
     throw error;
   }
+};
+
+export const useClasses = (
+  params?: GetClassesParams,
+  options?: { enabled?: boolean },
+) => {
+  const { enabled = true } = options ?? {};
+  return useQuery<ClassResponse>({
+    queryKey: ["classes", "list", params ?? {}],
+    queryFn: () => getClasses(params),
+    enabled,
+  });
 };
 
 export const getClassById = async (classId: string): Promise<IClass> => {
@@ -97,7 +149,7 @@ export const createClass = async (
 
 export const updateClass = async (
   classId: string,
-  classData: Partial<IClass>,
+  classData: ClassFormData | Partial<ClassFormData>,
 ): Promise<IClass> => {
   const response: ServerResponse<IClass> = await client(`/classes/${classId}`, {
     method: "PATCH",
@@ -177,6 +229,13 @@ export const removeStudentFromClass = async (
   return response;
 };
 
+function getAxiosErrorMessage(
+  error: AxiosError<{ message?: string }>,
+  fallback: string,
+): string {
+  return error?.response?.data?.message || fallback;
+}
+
 // create a react query hook to add a single student to a class
 export const useAddSingleStudentToClass = () => {
   const queryClient = useQueryClient();
@@ -196,7 +255,7 @@ export const useAddSingleStudentToClass = () => {
     },
     onError: (error: AxiosError<{ message: string }>) => {
       toast.error(
-        error?.response?.data?.message || "Error adding student to class",
+        getAxiosErrorMessage(error, "Error adding student to class"),
       );
     },
   });
@@ -221,7 +280,29 @@ export const useRemoveStudentFromClass = () => {
     },
     onError: (error: AxiosError<{ message: string }>) => {
       toast.error(
-        error?.response?.data?.message || "Error removing student from class",
+        getAxiosErrorMessage(error, "Error removing student from class"),
+      );
+    },
+  });
+};
+
+export const useBulkAddStudents = () => {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: ({
+      classId,
+      studentIds,
+    }: {
+      classId: string;
+      studentIds: string[];
+    }) => bulkAddStudents(classId, studentIds),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["classes"] });
+      toast.success("Students added to class successfully");
+    },
+    onError: (error: AxiosError<{ message: string }>) => {
+      toast.error(
+        getAxiosErrorMessage(error, "Error adding students to class"),
       );
     },
   });

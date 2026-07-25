@@ -2,7 +2,12 @@
 
 import { useModal } from "@/hooks/use-modal";
 import { deleteClass } from "@/services/class";
-import { IClass, getClassDocumentId, getPopulatedStudentsInClass } from "@/types/class";
+import {
+  IClass,
+  getClassDocumentId,
+  getPopulatedStudentsInClass,
+  type ClassTeacherRef,
+} from "@/types/class";
 import { User } from "@/types/user";
 import { useQueryClient } from "@tanstack/react-query";
 import React, { useCallback } from "react";
@@ -11,10 +16,15 @@ import { BulkAddStudentsModal } from "./BulkAddStudentsModal";
 import { ClassForm } from "./ClassForm";
 import { ViewStudentsInClassModal } from "./ViewStudentsInClassModal";
 import { DeleteConfirmation } from "./ConfirmationDialog";
+import { ClassDetailView } from "@/components/ClassDetailView";
 
 export type ClassModalsHandlers = {
   handleClassForm: () => void;
   handleEditClass: (classItem: IClass) => void;
+  handleViewClass: (
+    classItem: IClass,
+    getTeacherDisplayName: (ref: ClassTeacherRef) => string,
+  ) => void;
   handleBulkAddStudents: (classItem: IClass) => void;
   handleAddStudent: (classItem: IClass) => void;
   handleViewStudents: (classItem: IClass) => void;
@@ -29,6 +39,7 @@ export function useClassModals(): ClassModalsHandlers {
     openModal({
       title: "Create Class",
       content: <ClassForm key="create-class" />,
+      size: "half",
     });
   }, [openModal]);
 
@@ -42,6 +53,26 @@ export function useClassModals(): ClassModalsHandlers {
             initialData={classItem}
           />
         ),
+        size: "half",
+      });
+    },
+    [openModal],
+  );
+
+  const handleViewClass = useCallback(
+    (
+      classItem: IClass,
+      getTeacherDisplayName: (ref: ClassTeacherRef) => string,
+    ) => {
+      openModal({
+        title: "Class Details",
+        content: (
+          <ClassDetailView
+            classItem={classItem}
+            getTeacherDisplayName={getTeacherDisplayName}
+          />
+        ),
+        size: "lg",
       });
     },
     [openModal],
@@ -75,9 +106,16 @@ export function useClassModals(): ClassModalsHandlers {
       );
 
       const defaultCourseId =
-        typeof classItem.courseId === "string"
-          ? classItem.courseId
-          : (classItem.courseId as any)?._id || (classItem.courseId as any)?.id;
+        typeof classItem.primaryCourseId === "string"
+          ? classItem.primaryCourseId
+          : typeof classItem.courseId === "string"
+            ? classItem.courseId
+            : classItem.courseId?._id ||
+              classItem.courseId?.id ||
+              (typeof classItem.primaryCourseId === "object" &&
+              classItem.primaryCourseId
+                ? classItem.primaryCourseId._id || classItem.primaryCourseId.id
+                : undefined);
 
       openModal({
         title: "Add Student",
@@ -139,6 +177,7 @@ export function useClassModals(): ClassModalsHandlers {
   return {
     handleClassForm,
     handleEditClass,
+    handleViewClass,
     handleBulkAddStudents,
     handleAddStudent,
     handleViewStudents,

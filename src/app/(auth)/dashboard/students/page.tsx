@@ -5,7 +5,7 @@ import { DeleteConfirmation } from "@/components/modal/ConfirmationDialog";
 import { useModalContext } from "@/contexts/ModalContext";
 import { UserResponse } from "@/types/user";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
-import { Plus, Search, Trash2, Eye, Users } from "lucide-react";
+import { Plus, Search, Trash2, Eye } from "lucide-react";
 import React, { useState, useEffect, useRef } from "react";
 import { useRouter } from "next/navigation";
 import { User } from "@/types/user";
@@ -13,8 +13,10 @@ import {
   deleteStudent,
   searchStudents,
   useStudentsInfiniteQuery,
+  type StudentBranch,
 } from "@/services/student";
 import { StudentForm } from "@/components/modal";
+import { StudentBranchCountCards } from "@/components/StudentBranchCountCards";
 import Image from "next/image";
 import avatarImage from "@/assets/avatar.png";
 import { PAGE_SIZE } from "@/constant";
@@ -26,6 +28,9 @@ const StudentsPage = () => {
   const router = useRouter();
   const [isDeleting, setIsDeleting] = useState<string | null>(null);
   const [searchQuery, setSearchQuery] = useState<string>("");
+  const [selectedBranch, setSelectedBranch] = useState<StudentBranch | null>(
+    null,
+  );
   const loadMoreRef = useRef<HTMLDivElement>(null);
 
   // Paginated list (when not searching)
@@ -39,6 +44,7 @@ const StudentsPage = () => {
   } = useStudentsInfiniteQuery({
     enabled: !searchQuery.trim(),
     pageSize: PAGE_SIZE,
+    ...(selectedBranch ? { branch: selectedBranch } : {}),
   });
 
   // Search (when search query is set)
@@ -47,8 +53,12 @@ const StudentsPage = () => {
     isLoading: isSearching,
     error: searchError,
   } = useQuery<UserResponse>({
-    queryKey: ["students", "search", searchQuery],
-    queryFn: () => searchStudents(searchQuery.trim()),
+    queryKey: ["students", "search", searchQuery, selectedBranch ?? null],
+    queryFn: () =>
+      searchStudents(
+        searchQuery.trim(),
+        selectedBranch ? { branch: selectedBranch } : undefined,
+      ),
     enabled: searchQuery.trim().length > 0,
   });
 
@@ -67,7 +77,7 @@ const StudentsPage = () => {
   const isLoading = isSearchMode ? isSearching : isLoadingList;
   const error = isSearchMode ? searchError : listError;
 
-  const totalStudentCount = isSearchMode
+  const filteredResultCount = isSearchMode
     ? searchData?.totalResults
     : infiniteData?.pages?.[0]?.totalResults;
 
@@ -175,66 +185,63 @@ const StudentsPage = () => {
 
         {/* Main Content Area */}
         <main className="flex-1 overflow-auto p-6 bg-gray-50">
-          {/* Total students */}
-          <div className="mb-6">
-            <div className="bg-white rounded-lg shadow-sm border px-5 py-4 flex flex-wrap items-center gap-4 max-w-md">
-              <div className="p-3 bg-blue-100 rounded-lg shrink-0">
-                <Users className="h-6 w-6 text-blue-600" />
-              </div>
-              <div>
-                <p className="text-sm font-medium text-gray-600">
-                  {isSearchMode ? "Matching students" : "Total students"}
-                </p>
-                <p className="text-2xl font-bold text-gray-900 tabular-nums">
-                  {typeof totalStudentCount === "number"
-                    ? totalStudentCount
-                    : isLoading
-                      ? "…"
-                      : "—"}
-                </p>
-              </div>
-            </div>
-          </div>
+          <StudentBranchCountCards
+            selectedBranch={selectedBranch}
+            onBranchChange={setSelectedBranch}
+            className="mb-6"
+          />
 
-          {/* Search and Filters */}
+          {/* Search */}
           <div className="bg-white rounded-lg shadow-sm border p-6 mb-6">
-            <div className="flex flex-col sm:flex-row gap-4">
-              <div className="flex-1 relative">
-                <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400" />
-                <input
-                  type="text"
-                  placeholder="Search by name or roll number..."
-                  value={searchQuery}
-                  onChange={handleSearchChange}
-                  className="w-full pl-10 pr-10 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                />
-                {searchQuery && (
-                  <button
-                    onClick={handleClearSearch}
-                    className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600 transition-colors"
-                    title="Clear search"
+            <div className="relative">
+              <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400" />
+              <input
+                type="text"
+                placeholder="Search by name or roll number..."
+                value={searchQuery}
+                onChange={handleSearchChange}
+                className="w-full pl-10 pr-10 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+              />
+              {searchQuery && (
+                <button
+                  onClick={handleClearSearch}
+                  className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600 transition-colors"
+                  title="Clear search"
+                >
+                  <svg
+                    className="h-4 w-4"
+                    fill="none"
+                    stroke="currentColor"
+                    viewBox="0 0 24 24"
                   >
-                    <svg
-                      className="h-4 w-4"
-                      fill="none"
-                      stroke="currentColor"
-                      viewBox="0 0 24 24"
-                    >
-                      <path
-                        strokeLinecap="round"
-                        strokeLinejoin="round"
-                        strokeWidth={2}
-                        d="M6 18L18 6M6 6l12 12"
-                      />
-                    </svg>
-                  </button>
-                )}
-              </div>
+                    <path
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                      strokeWidth={2}
+                      d="M6 18L18 6M6 6l12 12"
+                    />
+                  </svg>
+                </button>
+              )}
             </div>
-            {searchQuery && (
+            {(searchQuery || selectedBranch) && (
               <div className="mt-3 text-sm text-gray-600">
-                Searching for:{" "}
-                <span className="font-semibold">{searchQuery}</span>
+                {selectedBranch ? (
+                  <>
+                    Showing{" "}
+                    <span className="font-semibold">Branch {selectedBranch}</span>
+                    {typeof filteredResultCount === "number"
+                      ? ` (${filteredResultCount})`
+                      : ""}
+                  </>
+                ) : null}
+                {searchQuery && selectedBranch ? " · " : null}
+                {searchQuery ? (
+                  <>
+                    Searching for:{" "}
+                    <span className="font-semibold">{searchQuery}</span>
+                  </>
+                ) : null}
               </div>
             )}
           </div>
@@ -295,19 +302,26 @@ const StudentsPage = () => {
                     </svg>
                   </div>
                   <p className="text-gray-900 font-medium mb-2">
-                    {searchQuery ? "No students found" : "No students found"}
+                    No students found
                   </p>
                   <p className="text-gray-500 mb-3">
-                    {searchQuery
-                      ? `No student found matching "${searchQuery}"`
-                      : "Get started by adding your first student"}
+                    {searchQuery && selectedBranch
+                      ? `No student found in Branch ${selectedBranch} matching "${searchQuery}"`
+                      : searchQuery
+                        ? `No student found matching "${searchQuery}"`
+                        : selectedBranch
+                          ? `No students found in Branch ${selectedBranch}`
+                          : "Get started by adding your first student"}
                   </p>
-                  {searchQuery && (
+                  {(searchQuery || selectedBranch) && (
                     <button
-                      onClick={handleClearSearch}
+                      onClick={() => {
+                        handleClearSearch();
+                        setSelectedBranch(null);
+                      }}
                       className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
                     >
-                      Clear Search
+                      Clear Filters
                     </button>
                   )}
                 </div>

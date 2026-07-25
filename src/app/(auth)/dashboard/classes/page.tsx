@@ -6,15 +6,27 @@ import { getClasses } from "@/services/class";
 import { getTeachers } from "@/services/teacher";
 import {
   ClassResponse,
+  GetClassesParams,
+  CLASS_BRANCHES,
   getClassTeacherList,
   classTeacherRefId,
   getClassDocumentId,
   type ClassTeacherRef,
 } from "@/types/class";
 import { useQuery } from "@tanstack/react-query";
-import { Plus, Search, Users, BookOpen, User as UserIcon } from "lucide-react";
+import {
+  Plus,
+  Search,
+  Users,
+  BookOpen,
+  User as UserIcon,
+  Clock,
+  Filter,
+} from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useCallback, useMemo, useState } from "react";
+import { ClassCapacityLabel } from "@/components/ClassDetailView";
+import { formatClassScheduleSummary } from "@/lib/class-validation";
 
 function getClassNamePrefix(name: string): string {
   const trimmed = name.trim();
@@ -24,25 +36,59 @@ function getClassNamePrefix(name: string): string {
   return slashIndex === -1 ? trimmed : trimmed.slice(0, slashIndex);
 }
 
+type FilterState = {
+  name: string;
+  branch: string;
+  academicYear: string;
+  teacherId: string;
+};
+
+const EMPTY_FILTERS: FilterState = {
+  name: "",
+  branch: "",
+  academicYear: "",
+  teacherId: "",
+};
+
+function filtersToParams(filters: FilterState): GetClassesParams {
+  const params: GetClassesParams = {};
+  if (filters.name.trim()) params.name = filters.name.trim();
+  if (filters.branch) params.branch = filters.branch;
+  if (filters.academicYear.trim())
+    params.academicYear = filters.academicYear.trim();
+  if (filters.teacherId) params.teacherId = filters.teacherId;
+  return params;
+}
+
 const ClassesPage = () => {
   const [searchTerm, setSearchTerm] = useState("");
   const [selectedPrefix, setSelectedPrefix] = useState<string | null>(null);
+  const [filters, setFilters] = useState<FilterState>(EMPTY_FILTERS);
+  const [appliedFilters, setAppliedFilters] =
+    useState<FilterState>(EMPTY_FILTERS);
+  const [showFilters, setShowFilters] = useState(false);
+
   const {
     handleClassForm,
     handleEditClass,
-    // handleBulkAddStudents,
+    handleViewClass,
     handleAddStudent,
     handleViewStudents,
     handleDeleteClass,
   } = useClassModals();
+
+  const queryParams = useMemo(
+    () => filtersToParams(appliedFilters),
+    [appliedFilters],
+  );
 
   const {
     data: classesData,
     isLoading,
     error,
   } = useQuery<ClassResponse>({
-    queryKey: ["classes"],
-    queryFn: () => getClasses(),
+    queryKey: ["classes", "list", queryParams],
+    queryFn: () => getClasses(queryParams),
   });
 
   const { data: teachersData } = useQuery({
@@ -136,7 +182,21 @@ const ClassesPage = () => {
     });
   }, [classesData?.results, searchTerm, selectedPrefix, getTeacherDisplayName]);
 
-  const hasActiveFilters = Boolean(searchTerm.trim() || selectedPrefix);
+  const hasServerFilters = Object.keys(queryParams).length > 0;
+  const hasActiveFilters = Boolean(
+    searchTerm.trim() || selectedPrefix || hasServerFilters,
+  );
+
+  const applyFilters = () => {
+    setAppliedFilters(filters);
+  };
+
+  const clearFilters = () => {
+    setFilters(EMPTY_FILTERS);
+    setAppliedFilters(EMPTY_FILTERS);
+    setSearchTerm("");
+    setSelectedPrefix(null);
+  };
 
   if (isLoading) {
     return (
@@ -161,7 +221,6 @@ const ClassesPage = () => {
   return (
     <ProtectedRoute>
       <div className="flex flex-col h-full">
-        {/* Top Header */}
         <header className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 h-auto sm:h-16 px-4 sm:px-6 py-4 border-b bg-white">
           <div>
             <h1 className="text-lg sm:text-xl font-semibold text-gray-900">
@@ -182,21 +241,32 @@ const ClassesPage = () => {
           </div>
         </header>
 
-        {/* Main Content Area */}
         <main className="flex-1 overflow-auto sm:py-6 sm:px-6 px-0 py-6">
-          {/* Search and Filters */}
-          <div className="bg-white rounded-lg shadow-sm border p-4 sm:p-6 mb-6">
+          <div className="bg-white rounded-lg shadow-sm border p-4 sm:p-6 mb-6 space-y-4">
             <div className="flex flex-col lg:flex-row lg:items-center gap-4">
               <div className="flex-1 relative min-w-0">
                 <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-400" />
                 <input
                   type="text"
-                  placeholder="Search classes..."
+                  placeholder="Quick search on this page…"
                   value={searchTerm}
                   onChange={(e) => setSearchTerm(e.target.value)}
                   className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent text-sm sm:text-base"
                 />
               </div>
+              <button
+                type="button"
+                onClick={() => setShowFilters((v) => !v)}
+                className={cn(
+                  "inline-flex items-center gap-2 px-3 py-2 rounded-lg text-sm font-medium border transition-colors",
+                  showFilters || hasServerFilters
+                    ? "bg-blue-50 text-blue-800 border-blue-200"
+                    : "bg-white text-gray-700 border-gray-300 hover:bg-gray-50",
+                )}
+              >
+                <Filter className="h-4 w-4" />
+                Filters
+              </button>
               {classPrefixes.length > 0 && (
                 <div className="flex flex-wrap items-center gap-2">
                   {classPrefixes.map((prefix) => {
@@ -225,9 +295,103 @@ const ClassesPage = () => {
                 </div>
               )}
             </div>
+
+            {showFilters ? (
+              <div className="border-t border-gray-100 pt-4 space-y-3">
+                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
+                  <div>
+                    <label className="block text-xs font-medium text-gray-600 mb-1">
+                      Name
+                    </label>
+                    <input
+                      type="text"
+                      value={filters.name}
+                      onChange={(e) =>
+                        setFilters((p) => ({ ...p, name: e.target.value }))
+                      }
+                      className="w-full px-3 py-2 border border-gray-300 rounded-md text-sm"
+                      placeholder="Filter by name"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-xs font-medium text-gray-600 mb-1">
+                      Branch
+                    </label>
+                    <select
+                      value={filters.branch}
+                      onChange={(e) =>
+                        setFilters((p) => ({ ...p, branch: e.target.value }))
+                      }
+                      className="w-full px-3 py-2 border border-gray-300 rounded-md text-sm"
+                    >
+                      <option value="">All</option>
+                      {CLASS_BRANCHES.map((b) => (
+                        <option key={b} value={b}>
+                          Branch {b}
+                        </option>
+                      ))}
+                    </select>
+                  </div>
+                  <div>
+                    <label className="block text-xs font-medium text-gray-600 mb-1">
+                      Academic year
+                    </label>
+                    <input
+                      type="text"
+                      value={filters.academicYear}
+                      onChange={(e) =>
+                        setFilters((p) => ({
+                          ...p,
+                          academicYear: e.target.value,
+                        }))
+                      }
+                      className="w-full px-3 py-2 border border-gray-300 rounded-md text-sm"
+                      placeholder="2025-26"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-xs font-medium text-gray-600 mb-1">
+                      Teacher
+                    </label>
+                    <select
+                      value={filters.teacherId}
+                      onChange={(e) =>
+                        setFilters((p) => ({
+                          ...p,
+                          teacherId: e.target.value,
+                        }))
+                      }
+                      className="w-full px-3 py-2 border border-gray-300 rounded-md text-sm"
+                    >
+                      <option value="">All</option>
+                      {(teachersData?.results ?? []).map((t) => (
+                        <option key={t._id} value={t._id}>
+                          {t.name}
+                        </option>
+                      ))}
+                    </select>
+                  </div>
+                </div>
+                <div className="flex flex-wrap gap-2 justify-end">
+                  <button
+                    type="button"
+                    onClick={clearFilters}
+                    className="px-3 py-1.5 text-sm border border-gray-300 rounded-md text-gray-700 hover:bg-gray-50"
+                  >
+                    Clear
+                  </button>
+                  <button
+                    type="button"
+                    onClick={applyFilters}
+                    className="px-3 py-1.5 text-sm rounded-md bg-blue-600 text-white hover:bg-blue-700"
+                  >
+                    Apply filters
+                  </button>
+                </div>
+              </div>
+            ) : null}
           </div>
 
-          {/* Classes Grid */}
           {filteredClasses.length > 0 && (
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 sm:gap-6">
               {filteredClasses.map((classItem) => {
@@ -241,6 +405,7 @@ const ClassesPage = () => {
                   TEACHER_STACK_MAX,
                 );
                 const overflowCount = teacherAvatars.length - TEACHER_STACK_MAX;
+                const schedule = formatClassScheduleSummary(classItem);
 
                 return (
                   <div
@@ -296,16 +461,21 @@ const ClassesPage = () => {
                             </div>
                           )}
                         </div>
-                        <span className="text-xs text-gray-500 bg-gray-100 px-2 py-1 rounded">
-                          {typeof classItem.courseId === "string"
-                            ? ""
-                            : classItem.courseId?.instrument || ""}
-                        </span>
                       </div>
 
-                      <h3 className="text-base sm:text-lg font-semibold text-gray-900 mb-2">
+                      <h3 className="text-base sm:text-lg font-semibold text-gray-900 mb-1">
                         {classItem?.name}
                       </h3>
+                      {classItem.branch ? (
+                        <p className="text-xs text-gray-500 mb-3">
+                          Branch {classItem.branch}
+                          {classItem.academicYear
+                            ? ` · ${classItem.academicYear}`
+                            : ""}
+                        </p>
+                      ) : (
+                        <div className="mb-3" />
+                      )}
 
                       <div className="space-y-3 mb-4">
                         <div className="flex items-start gap-2 text-sm text-gray-600">
@@ -321,25 +491,34 @@ const ClassesPage = () => {
                         <div className="flex items-center gap-2 text-sm text-gray-600">
                           <Users className="h-4 w-4 text-purple-500" />
                           <span>
-                            Students: {classItem?.studentsInClass?.length}
+                            Students: <ClassCapacityLabel klass={classItem} />
                           </span>
                         </div>
+
+                        {schedule ? (
+                          <div className="flex items-start gap-2 text-sm text-gray-600">
+                            <Clock className="h-4 w-4 text-emerald-500 shrink-0 mt-0.5" />
+                            <span>{schedule}</span>
+                          </div>
+                        ) : null}
                       </div>
                     </div>
 
                     <div className="px-4 sm:px-6 py-3 bg-gray-50 border-t flex flex-wrap gap-4">
+                      <button
+                        onClick={() =>
+                          handleViewClass(classItem, getTeacherDisplayName)
+                        }
+                        className="text-gray-700 hover:text-gray-900 text-sm font-medium"
+                      >
+                        Details
+                      </button>
                       <button
                         onClick={() => handleViewStudents(classItem)}
                         className="text-blue-600 hover:text-blue-800 text-sm font-medium"
                       >
                         View Students
                       </button>
-                      {/* <button
-                    onClick={() => handleBulkAddStudents(classItem)}
-                    className="text-blue-600 hover:text-blue-800 text-sm font-medium"
-                  >
-                    Add Students
-                  </button> */}
                       <button
                         onClick={() => handleAddStudent(classItem)}
                         className="text-blue-600 hover:text-blue-800 text-sm font-medium"
@@ -370,7 +549,6 @@ const ClassesPage = () => {
             </div>
           )}
 
-          {/* Empty State */}
           {filteredClasses.length === 0 && (
             <div className="text-center py-12">
               <BookOpen className="mx-auto h-12 w-12 text-gray-400" />
@@ -379,11 +557,7 @@ const ClassesPage = () => {
               </h3>
               <p className="mt-1 text-sm text-gray-500">
                 {hasActiveFilters
-                  ? selectedPrefix && searchTerm.trim()
-                    ? `No classes found for ${selectedPrefix} matching "${searchTerm.trim()}"`
-                    : selectedPrefix
-                      ? `No classes found for ${selectedPrefix}`
-                      : `No classes found matching "${searchTerm.trim()}"`
+                  ? "Try adjusting search or filters."
                   : "Get started by creating your first class."}
               </p>
               {!hasActiveFilters && (

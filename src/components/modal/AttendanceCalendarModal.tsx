@@ -1,11 +1,25 @@
 "use client";
 
-import { useState, useEffect } from "react";
-import { useQuery } from "@tanstack/react-query";
-import { getStudentAttendance } from "@/services/attendance";
+import { useEffect, useState } from "react";
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import {
+  getStudentAttendance,
+  markAttendanceAsAbsent,
+  markAttendanceAsPresent,
+} from "@/services/attendance";
 import { AttendanceResponse } from "@/types/attendance";
-import { Calendar, X, ChevronLeft, ChevronRight } from "lucide-react";
+import {
+  Calendar,
+  Check,
+  ChevronLeft,
+  ChevronRight,
+  Loader2,
+  UserX,
+  X,
+} from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { toast } from "react-toastify";
+import { formatDisplayDate } from "@/lib/utils";
 
 interface AttendanceCalendarModalProps {
   isOpen: boolean;
@@ -15,6 +29,21 @@ interface AttendanceCalendarModalProps {
   studentName: string;
 }
 
+function toLocalDateString(date: Date): string {
+  return date.toLocaleDateString("en-CA");
+}
+
+function datesMatch(apiDate: string, targetDateString: string): boolean {
+  const api = new Date(apiDate);
+  const target = new Date(targetDateString);
+
+  return (
+    api.getFullYear() === target.getFullYear() &&
+    api.getMonth() === target.getMonth() &&
+    api.getDate() === target.getDate()
+  );
+}
+
 export default function AttendanceCalendarModal({
   isOpen,
   onClose,
@@ -22,53 +51,86 @@ export default function AttendanceCalendarModal({
   classId,
   studentName,
 }: AttendanceCalendarModalProps) {
+  const queryClient = useQueryClient();
   const [currentDate, setCurrentDate] = useState(new Date());
   const [selectedDate, setSelectedDate] = useState<string>("");
 
-  // Fetch attendance data for the student
   const { data: attendanceData, isLoading } = useQuery<AttendanceResponse>({
     queryKey: ["studentAttendance", studentId, classId],
     queryFn: () => getStudentAttendance(studentId, classId),
     enabled: isOpen && !!studentId && !!classId,
   });
 
-  // Get current month's start and end dates
+  useEffect(() => {
+    if (!isOpen) return;
+    const today = toLocalDateString(new Date());
+    setSelectedDate(today);
+    setCurrentDate(new Date());
+  }, [isOpen, studentId, classId]);
+
+  const invalidateAttendance = () => {
+    queryClient.invalidateQueries({
+      queryKey: ["studentAttendance", studentId, classId],
+    });
+    queryClient.invalidateQueries({ queryKey: ["attendance"] });
+  };
+
+  const markPresentMutation = useMutation({
+    mutationFn: (date: string) =>
+      markAttendanceAsPresent({ studentId, classId, date }),
+    onSuccess: () => {
+      invalidateAttendance();
+      toast.success("Marked as present");
+    },
+    onError: (error) => {
+      console.error("Failed to mark attendance as present:", error);
+      toast.error("Failed to mark as present");
+    },
+  });
+
+  const markAbsentMutation = useMutation({
+    mutationFn: (date: string) =>
+      markAttendanceAsAbsent({ studentId, classId, date }),
+    onSuccess: () => {
+      invalidateAttendance();
+      toast.success("Marked as absent");
+    },
+    onError: (error) => {
+      console.error("Failed to mark attendance as absent:", error);
+      toast.error("Failed to mark as absent");
+    },
+  });
+
+  const isMarking =
+    markPresentMutation.isPending || markAbsentMutation.isPending;
+
   const startOfMonth = new Date(
     currentDate.getFullYear(),
     currentDate.getMonth(),
-    1
+    1,
   );
   const endOfMonth = new Date(
     currentDate.getFullYear(),
     currentDate.getMonth() + 1,
-    0
+    0,
   );
-
-  // Get the first day of the month (0 = Sunday, 1 = Monday, etc.)
   const firstDayOfMonth = startOfMonth.getDay();
-
-  // Get total days in the month
   const daysInMonth = endOfMonth.getDate();
 
-  // Generate calendar days array
   const generateCalendarDays = () => {
-    const days = [];
+    const days: { day: number | null; date: string | null }[] = [];
 
-    // Add empty cells for days before the first day of the month
     for (let i = 0; i < firstDayOfMonth; i++) {
       days.push({ day: null, date: null });
     }
 
-    // Add all days of the month
     for (let day = 1; day <= daysInMonth; day++) {
       const date = new Date(
         currentDate.getFullYear(),
         currentDate.getMonth(),
-        day
+        day,
       );
-      // Use local date formatting to avoid timezone issues
-      const dateString = date.toLocaleDateString("en-CA"); // Returns YYYY-MM-DD format
-      days.push({ day, date: dateString });
+      days.push({ day, date: toLocalDateString(date) });
     }
 
     return days;
@@ -76,123 +138,63 @@ export default function AttendanceCalendarModal({
 
   const calendarDays = generateCalendarDays();
 
-  // Check if a date has attendance data
   const getAttendanceStatus = (dateString: string) => {
-    if (!attendanceData?.results || attendanceData.results.length === 0)
-      return null;
-
-    const record = attendanceData.results[0]; // Assuming single result for student
+    const record = attendanceData?.results?.[0];
     if (!record) return null;
 
-    // Parse the target date string to get year, month, and day
-    const targetDate = new Date(dateString);
-    const targetYear = targetDate.getFullYear();
-    const targetMonth = targetDate.getMonth() + 1; // getMonth() returns 0-11
-    const targetDay = targetDate.getDate();
-
-    const isPresent = record.presentDates?.some((date) => {
-      const apiDate = new Date(date);
-      const apiYear = apiDate.getFullYear();
-      const apiMonth = apiDate.getMonth() + 1;
-      const apiDay = apiDate.getDate();
-
-      console.log("Comparing with API date:", date, "->", {
-        apiYear,
-        apiMonth,
-        apiDay,
-      });
-
-      return (
-        apiYear === targetYear &&
-        apiMonth === targetMonth &&
-        apiDay === targetDay
-      );
-    });
-
-    const isAbsent = record.absentDates?.some((date) => {
-      const apiDate = new Date(date);
-      const apiYear = apiDate.getFullYear();
-      const apiMonth = apiDate.getMonth() + 1;
-      const apiDay = apiDate.getDate();
-
-      console.log("Comparing with API date:", date, "->", {
-        apiYear,
-        apiMonth,
-        apiDay,
-      });
-
-      return (
-        apiYear === targetYear &&
-        apiMonth === targetMonth &&
-        apiDay === targetDay
-      );
-    });
-
-    console.log("Result:", { isPresent, isAbsent });
-    if (isPresent) return "present";
-    if (isAbsent) return "absent";
+    if (record.presentDates?.some((date) => datesMatch(date, dateString))) {
+      return "present" as const;
+    }
+    if (record.absentDates?.some((date) => datesMatch(date, dateString))) {
+      return "absent" as const;
+    }
     return null;
   };
 
-  // Navigate to previous month
   const goToPreviousMonth = () => {
     setCurrentDate(
-      new Date(currentDate.getFullYear(), currentDate.getMonth() - 1, 1)
+      new Date(currentDate.getFullYear(), currentDate.getMonth() - 1, 1),
     );
   };
 
-  // Navigate to next month
   const goToNextMonth = () => {
     setCurrentDate(
-      new Date(currentDate.getFullYear(), currentDate.getMonth() + 1, 1)
+      new Date(currentDate.getFullYear(), currentDate.getMonth() + 1, 1),
     );
   };
 
-  // Format month and year for display
-  const formatMonthYear = () => {
-    return currentDate.toLocaleDateString("en-US", {
+  const formatMonthYear = () =>
+    currentDate.toLocaleDateString("en-US", {
       month: "long",
       year: "numeric",
     });
-  };
 
-  // Handle date selection
-  const handleDateClick = (dateString: string) => {
-    setSelectedDate(dateString);
-  };
-
-  // Get attendance count for the month
   const getMonthlyStats = () => {
-    if (!attendanceData?.results || attendanceData.results.length === 0) {
-      return { present: 0, absent: 0 };
-    }
+    const record = attendanceData?.results?.[0];
+    if (!record) return { present: 0, absent: 0 };
 
-    const record = attendanceData.results[0];
-    const currentYear = currentDate.getFullYear();
-    const currentMonth = currentDate.getMonth() + 1; // getMonth() returns 0-11
+    const year = currentDate.getFullYear();
+    const month = currentDate.getMonth();
 
-    const presentCount =
+    const present =
       record.presentDates?.filter((date) => {
         const apiDate = new Date(date);
-        return (
-          apiDate.getFullYear() === currentYear &&
-          apiDate.getMonth() + 1 === currentMonth
-        );
+        return apiDate.getFullYear() === year && apiDate.getMonth() === month;
       }).length || 0;
 
-    const absentCount =
+    const absent =
       record.absentDates?.filter((date) => {
         const apiDate = new Date(date);
-        return (
-          apiDate.getFullYear() === currentYear &&
-          apiDate.getMonth() + 1 === currentMonth
-        );
+        return apiDate.getFullYear() === year && apiDate.getMonth() === month;
       }).length || 0;
 
-    return { present: presentCount, absent: absentCount };
+    return { present, absent };
   };
 
   const monthlyStats = getMonthlyStats();
+  const selectedStatus = selectedDate
+    ? getAttendanceStatus(selectedDate)
+    : null;
 
   if (!isOpen) return null;
 
@@ -254,13 +256,13 @@ export default function AttendanceCalendarModal({
         {/* Monthly Stats */}
         <div className="flex items-center justify-center gap-6 p-4 bg-gray-50">
           <div className="flex items-center gap-2">
-            <div className="w-3 h-3 bg-green-500 rounded-full"></div>
+            <div className="w-3 h-3 bg-green-500 rounded-full" />
             <span className="text-sm text-gray-600">
               Present: {monthlyStats.present}
             </span>
           </div>
           <div className="flex items-center gap-2">
-            <div className="w-3 h-3 bg-red-500 rounded-full"></div>
+            <div className="w-3 h-3 bg-red-500 rounded-full" />
             <span className="text-sm text-gray-600">
               Absent: {monthlyStats.absent}
             </span>
@@ -269,116 +271,135 @@ export default function AttendanceCalendarModal({
 
         {/* Calendar Grid */}
         <div className="p-6">
-          {/* Day Headers */}
-          <div className="grid grid-cols-7 gap-1 mb-2">
-            {["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"].map((day) => (
-              <div
-                key={day}
-                className="text-center text-sm font-medium text-gray-500 py-2"
-              >
-                {day}
-              </div>
-            ))}
-          </div>
-
-          {/* Calendar Days */}
-          <div className="grid grid-cols-7 gap-1">
-            {calendarDays.map(({ day, date }, index) => {
-              if (!day || !date) {
-                return (
-                  <div
-                    key={index}
-                    className="h-12 border border-gray-100 bg-gray-50"
-                  />
-                );
-              }
-
-              const attendanceStatus = getAttendanceStatus(date);
-              const isToday = date === new Date().toLocaleDateString("en-CA");
-              const isSelected = date === selectedDate;
-
-              return (
-                <button
-                  key={index}
-                  onClick={() => handleDateClick(date)}
-                  className={`
-                    h-12 border border-gray-200 hover:border-blue-300 transition-colors
-                    flex flex-col items-center justify-center relative
-                    ${isToday ? "bg-blue-50 border-blue-300" : ""}
-                    ${isSelected ? "bg-blue-100 border-blue-400" : ""}
-                    ${attendanceStatus === "present" ? "bg-green-50" : ""}
-                    ${attendanceStatus === "absent" ? "bg-red-50" : ""}
-                  `}
-                >
-                  <span
-                    className={`text-sm font-medium ${
-                      isToday ? "text-blue-600" : "text-gray-900"
-                    }`}
-                  >
-                    {day}
-                  </span>
-
-                  {/* Attendance indicator */}
-                  {attendanceStatus && (
+          {isLoading ? (
+            <div className="flex items-center justify-center py-12 text-gray-500 gap-2">
+              <Loader2 className="h-5 w-5 animate-spin" />
+              Loading attendance...
+            </div>
+          ) : (
+            <>
+              <div className="grid grid-cols-7 gap-1 mb-2">
+                {["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"].map(
+                  (day) => (
                     <div
+                      key={day}
+                      className="text-center text-sm font-medium text-gray-500 py-2"
+                    >
+                      {day}
+                    </div>
+                  ),
+                )}
+              </div>
+
+              <div className="grid grid-cols-7 gap-1">
+                {calendarDays.map(({ day, date }, index) => {
+                  if (!day || !date) {
+                    return (
+                      <div
+                        key={index}
+                        className="h-12 border border-gray-100 bg-gray-50"
+                      />
+                    );
+                  }
+
+                  const attendanceStatus = getAttendanceStatus(date);
+                  const isToday = date === toLocalDateString(new Date());
+                  const isSelected = date === selectedDate;
+
+                  return (
+                    <button
+                      key={index}
+                      type="button"
+                      onClick={() => setSelectedDate(date)}
                       className={`
-                      w-2 h-2 rounded-full mt-1
-                      ${
-                        attendanceStatus === "present"
-                          ? "bg-green-500"
-                          : "bg-red-500"
-                      }
-                    `}
-                    />
-                  )}
-                </button>
-              );
-            })}
-          </div>
+                        h-12 border border-gray-200 hover:border-blue-300 transition-colors
+                        flex flex-col items-center justify-center relative
+                        ${isToday ? "bg-blue-50 border-blue-300" : ""}
+                        ${isSelected ? "ring-2 ring-blue-400 border-blue-400" : ""}
+                        ${attendanceStatus === "present" ? "bg-green-50" : ""}
+                        ${attendanceStatus === "absent" ? "bg-red-50" : ""}
+                      `}
+                    >
+                      <span
+                        className={`text-sm font-medium ${
+                          isToday ? "text-blue-600" : "text-gray-900"
+                        }`}
+                      >
+                        {day}
+                      </span>
+
+                      {attendanceStatus && (
+                        <div
+                          className={`w-2 h-2 rounded-full mt-1 ${
+                            attendanceStatus === "present"
+                              ? "bg-green-500"
+                              : "bg-red-500"
+                          }`}
+                        />
+                      )}
+                    </button>
+                  );
+                })}
+              </div>
+            </>
+          )}
         </div>
 
-        {/* Selected Date Info */}
+        {/* Selected Date + Mark CTAs */}
         {selectedDate && (
-          <div className="p-4 border-t bg-gray-50">
+          <div className="p-4 border-t bg-gray-50 space-y-4">
             <div className="text-center">
               <p className="text-sm text-gray-600">Selected Date</p>
               <p className="text-lg font-semibold text-gray-900">
-                {new Date(selectedDate).toLocaleDateString("en-US", {
-                  weekday: "long",
-                  year: "numeric",
-                  month: "long",
-                  day: "numeric",
-                })}
+                {formatDisplayDate(selectedDate)}
               </p>
-              {(() => {
-                const status = getAttendanceStatus(selectedDate);
-                if (status === "present") {
-                  return (
-                    <div className="flex items-center justify-center gap-2 mt-2">
-                      <div className="w-3 h-3 bg-green-500 rounded-full"></div>
-                      <span className="text-green-700 font-medium">
-                        Present
-                      </span>
-                    </div>
-                  );
-                } else if (status === "absent") {
-                  return (
-                    <div className="flex items-center justify-center gap-2 mt-2">
-                      <div className="w-3 h-3 bg-red-500 rounded-full"></div>
-                      <span className="text-red-700 font-medium">Absent</span>
-                    </div>
-                  );
-                } else {
-                  return (
-                    <div className="flex items-center justify-center gap-2 mt-2">
-                      <div className="w-3 h-3 bg-gray-400 rounded-full"></div>
-                      <span className="text-gray-600">
-                        No attendance marked
-                      </span>
-                    </div>
-                  );
-                }
-              })()}
+              <div className="flex items-center justify-center gap-2 mt-2">
+                {selectedStatus === "present" ? (
+                  <>
+                    <div className="w-3 h-3 bg-green-500 rounded-full" />
+                    <span className="text-green-700 font-medium">Present</span>
+                  </>
+                ) : selectedStatus === "absent" ? (
+                  <>
+                    <div className="w-3 h-3 bg-red-500 rounded-full" />
+                    <span className="text-red-700 font-medium">Absent</span>
+                  </>
+                ) : (
+                  <>
+                    <div className="w-3 h-3 bg-gray-400 rounded-full" />
+                    <span className="text-gray-600">No attendance marked</span>
+                  </>
+                )}
+              </div>
+            </div>
+
+            <div className="flex flex-wrap items-center justify-center gap-3">
+              <button
+                type="button"
+                onClick={() => markPresentMutation.mutate(selectedDate)}
+                disabled={isMarking || selectedStatus === "present"}
+                className="inline-flex items-center gap-2 px-4 py-2 text-sm font-medium rounded-lg transition-colors bg-green-100 text-green-700 hover:bg-green-200 border border-green-300 disabled:opacity-50 disabled:cursor-not-allowed"
+              >
+                {markPresentMutation.isPending ? (
+                  <Loader2 className="h-4 w-4 animate-spin" />
+                ) : (
+                  <Check className="h-4 w-4" />
+                )}
+                Mark Present
+              </button>
+              <button
+                type="button"
+                onClick={() => markAbsentMutation.mutate(selectedDate)}
+                disabled={isMarking || selectedStatus === "absent"}
+                className="inline-flex items-center gap-2 px-4 py-2 text-sm font-medium rounded-lg transition-colors bg-red-100 text-red-700 hover:bg-red-200 border border-red-300 disabled:opacity-50 disabled:cursor-not-allowed"
+              >
+                {markAbsentMutation.isPending ? (
+                  <Loader2 className="h-4 w-4 animate-spin" />
+                ) : (
+                  <UserX className="h-4 w-4" />
+                )}
+                Mark Absent
+              </button>
             </div>
           </div>
         )}

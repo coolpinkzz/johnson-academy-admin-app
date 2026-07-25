@@ -1,7 +1,7 @@
 "use client";
 
-import { useEffect, useRef, useState } from "react";
-import { ChevronDown, Loader2 } from "lucide-react";
+import { useEffect, useMemo, useRef, useState } from "react";
+import { ChevronDown, Loader2, Search } from "lucide-react";
 import { User } from "@/types/user";
 
 interface TeacherSelectProps {
@@ -59,14 +59,30 @@ export function TeacherSelect({
   disabled = false,
 }: TeacherSelectProps) {
   const [isOpen, setIsOpen] = useState(false);
+  const [searchTerm, setSearchTerm] = useState("");
   const containerRef = useRef<HTMLDivElement>(null);
+  const searchInputRef = useRef<HTMLInputElement>(null);
 
   const selectedTeacher = teachers.find(
     (teacher) => getTeacherId(teacher) === value,
   );
 
+  const filteredTeachers = useMemo(() => {
+    const query = searchTerm.trim().toLowerCase();
+    if (!query) return teachers;
+
+    return teachers.filter((teacher) => {
+      const name = (teacher.name || "").toLowerCase();
+      const email = (teacher.email || "").toLowerCase();
+      return name.includes(query) || email.includes(query);
+    });
+  }, [teachers, searchTerm]);
+
   useEffect(() => {
-    if (!isOpen) return;
+    if (!isOpen) {
+      setSearchTerm("");
+      return;
+    }
 
     const handleClickOutside = (event: MouseEvent) => {
       if (
@@ -78,10 +94,20 @@ export function TeacherSelect({
     };
 
     document.addEventListener("mousedown", handleClickOutside);
+
+    // Focus search when dropdown opens
+    requestAnimationFrame(() => searchInputRef.current?.focus());
+
     return () => document.removeEventListener("mousedown", handleClickOutside);
   }, [isOpen]);
 
   const isDisabled = disabled || isLoading || Boolean(error);
+
+  const closeAndSelect = (teacherId: string) => {
+    onChange(teacherId);
+    setIsOpen(false);
+    setSearchTerm("");
+  };
 
   return (
     <div ref={containerRef} className="relative">
@@ -122,44 +148,66 @@ export function TeacherSelect({
       </button>
 
       {isOpen && !isDisabled && (
-        <div className="absolute z-20 mt-2 w-full rounded-lg border border-gray-200 bg-white py-1 shadow-lg max-h-64 overflow-y-auto">
-          {teachers.length === 0 ? (
-            <p className="px-3 py-2 text-sm text-gray-500">No teachers available</p>
-          ) : (
-            teachers.map((teacher) => {
-              const teacherId = getTeacherId(teacher);
-              const isSelected = teacherId === value;
+        <div className="absolute z-20 mt-2 w-full rounded-lg border border-gray-200 bg-white shadow-lg overflow-hidden">
+          <div className="sticky top-0 z-10 border-b border-gray-100 bg-white p-2">
+            <div className="relative">
+              <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400 pointer-events-none" />
+              <input
+                ref={searchInputRef}
+                type="search"
+                value={searchTerm}
+                onChange={(e) => setSearchTerm(e.target.value)}
+                onClick={(e) => e.stopPropagation()}
+                onKeyDown={(e) => e.stopPropagation()}
+                placeholder="Search by name or email…"
+                className="w-full pl-8 pr-3 py-1.5 text-sm border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                autoComplete="off"
+              />
+            </div>
+          </div>
 
-              return (
-                <button
-                  key={teacherId}
-                  type="button"
-                  onClick={() => {
-                    onChange(teacherId);
-                    setIsOpen(false);
-                  }}
-                  className={`w-full flex items-center gap-3 px-3 py-2 text-left transition-colors hover:bg-gray-50 ${
-                    isSelected ? "bg-blue-50" : ""
-                  }`}
-                >
-                  <UserAvatar
-                    name={teacher.name}
-                    profilePicture={teacher.profilePicture}
-                  />
-                  <span className="flex min-w-0 flex-col">
-                    <span className="text-sm font-medium text-gray-900 truncate">
-                      {teacher.name}
-                    </span>
-                    {teacher.email ? (
-                      <span className="text-xs text-gray-500 truncate">
-                        {teacher.email}
+          <div className="max-h-56 overflow-y-auto py-1">
+            {teachers.length === 0 ? (
+              <p className="px-3 py-2 text-sm text-gray-500">
+                No teachers available
+              </p>
+            ) : filteredTeachers.length === 0 ? (
+              <p className="px-3 py-2 text-sm text-gray-500">
+                No teachers match &quot;{searchTerm.trim()}&quot;
+              </p>
+            ) : (
+              filteredTeachers.map((teacher) => {
+                const teacherId = getTeacherId(teacher);
+                const isSelected = teacherId === value;
+
+                return (
+                  <button
+                    key={teacherId}
+                    type="button"
+                    onClick={() => closeAndSelect(teacherId)}
+                    className={`w-full flex items-center gap-3 px-3 py-2 text-left transition-colors hover:bg-gray-50 ${
+                      isSelected ? "bg-blue-50" : ""
+                    }`}
+                  >
+                    <UserAvatar
+                      name={teacher.name}
+                      profilePicture={teacher.profilePicture}
+                    />
+                    <span className="flex min-w-0 flex-col">
+                      <span className="text-sm font-medium text-gray-900 truncate">
+                        {teacher.name}
                       </span>
-                    ) : null}
-                  </span>
-                </button>
-              );
-            })
-          )}
+                      {teacher.email ? (
+                        <span className="text-xs text-gray-500 truncate">
+                          {teacher.email}
+                        </span>
+                      ) : null}
+                    </span>
+                  </button>
+                );
+              })
+            )}
+          </div>
         </div>
       )}
     </div>
