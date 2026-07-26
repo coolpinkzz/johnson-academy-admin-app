@@ -41,12 +41,12 @@ export interface StudentMonthlyReportResponse {
     id: string;
   };
   courseId: MRTCourseRef;
-  sptAndFileSubmission: number;
   regularity: number;
   learningSpeed: number;
-  songLearning: number;
-  theoryAndTechnicals: number;
-  assignment: number;
+  theory: number;
+  technicalExercises: number;
+  repertoireRhythmSense: number;
+  repertoireDynamics: number;
   totalScore: number;
   averageScore: number;
   remarks: string;
