@@ -339,7 +339,9 @@ export function ClassForm({
             {isLoadingTeachers ? (
               <p className="text-sm text-gray-500 py-2">Loading teachers...</p>
             ) : teachers.length === 0 ? (
-              <p className="text-sm text-gray-500 py-2">No teachers available</p>
+              <p className="text-sm text-gray-500 py-2">
+                No teachers available
+              </p>
             ) : displayedTeachers.length === 0 ? (
               <p className="text-sm text-gray-500 py-2">
                 {teacherSearch.trim()
@@ -429,13 +431,10 @@ export function ClassForm({
         </div>
       </Section>
 
-      <Section
-        title="Capacity"
-        description="Session capacity = seats per meeting (used later for compensation)."
-      >
+      <Section title="Capacity">
         <div>
           <label className="block text-sm font-medium text-gray-700 mb-1">
-            Session capacity
+            Maximum class capacity
           </label>
           <input
             type="number"

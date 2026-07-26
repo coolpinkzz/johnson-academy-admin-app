@@ -38,7 +38,7 @@ export function ClassDetailView({
     { label: "Teachers", value: teachers || "—" },
     { label: "Students enrolled", value: enrolled },
     {
-      label: "Session capacity",
+      label: "Maximum class capacity",
       value: classItem.sessionCapacity ?? "—",
     },
     {
@@ -58,7 +58,9 @@ export function ClassDetailView({
   return (
     <div className="space-y-4">
       <div>
-        <h3 className="text-lg font-semibold text-gray-900">{classItem.name}</h3>
+        <h3 className="text-lg font-semibold text-gray-900">
+          {classItem.name}
+        </h3>
         <p className="text-sm text-gray-500 mt-0.5">Class details</p>
       </div>
       <dl className="divide-y divide-gray-100 border border-gray-100 rounded-lg overflow-hidden">
