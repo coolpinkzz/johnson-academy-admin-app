@@ -70,6 +70,9 @@ export interface User {
   employeeId?: string;
   phoneNumber?: string;
   profilePicture?: string;
+  department?: string;
+  /** Staff-only: branches whose students this user may access */
+  branchAccess?: number[];
 }
 
 // Student data returned from getStudentsByClass endpoint

@@ -11,15 +11,22 @@ import {
   ChevronLeft,
   ChevronRight,
   FileBarChart,
+  UserCog,
 } from "lucide-react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { useState } from "react";
+import { useMemo, useState } from "react";
 import Image from "next/image";
 import logoImage from "@/assets/logo.png";
+import {
+  DashboardModule,
+  getNavModulesForRole,
+  MODULE_ROUTES,
+} from "@/lib/rbac";
 
 interface SidebarItem {
   title: string;
+  module: DashboardModule;
   href: string;
   icon: React.ReactNode;
   badge?: string;
@@ -28,97 +35,70 @@ interface SidebarItem {
 const sidebarItems: SidebarItem[] = [
   {
     title: "Dashboard",
-    href: "/dashboard",
+    module: "dashboard",
+    href: MODULE_ROUTES.dashboard,
     icon: <Home className="h-4 w-4" />,
   },
   {
     title: "Students",
-    href: "/dashboard/students",
+    module: "students",
+    href: MODULE_ROUTES.students,
     icon: <Users className="h-4 w-4" />,
   },
   {
     title: "Teachers",
-    href: "/dashboard/teachers",
+    module: "teachers",
+    href: MODULE_ROUTES.teachers,
     icon: <Users className="h-4 w-4" />,
   },
   {
     title: "Courses",
-    href: "/dashboard/courses",
+    module: "courses",
+    href: MODULE_ROUTES.courses,
     icon: <BookOpen className="h-4 w-4" />,
   },
   {
     title: "Syllabus",
-    href: "/dashboard/syllabus",
+    module: "syllabus",
+    href: MODULE_ROUTES.syllabus,
     icon: <BookOpen className="h-4 w-4" />,
   },
   {
     title: "Modules",
-    href: "/dashboard/modules",
+    module: "modules",
+    href: MODULE_ROUTES.modules,
     icon: <BookOpen className="h-4 w-4" />,
   },
   {
     title: "Classes",
-    href: "/dashboard/classes",
+    module: "classes",
+    href: MODULE_ROUTES.classes,
     icon: <GraduationCap className="h-4 w-4" />,
   },
   {
     title: "Attendance",
-    href: "/dashboard/attendance",
+    module: "attendance",
+    href: MODULE_ROUTES.attendance,
     icon: <Clock className="h-4 w-4" />,
   },
   {
     title: "Compensation",
-    href: "/dashboard/compensation",
+    module: "compensation",
+    href: MODULE_ROUTES.compensation,
     icon: <ArrowLeftRight className="h-4 w-4" />,
   },
   {
     title: "Monthly Reports",
-    href: "/dashboard/monthly-reports",
+    module: "monthly-reports",
+    href: MODULE_ROUTES["monthly-reports"],
     icon: <FileBarChart className="h-4 w-4" />,
   },
-  // {
-  //   title: "Schedule",
-  //   href: "/dashboard/schedule",
-  //   icon: <Calendar className="h-4 w-4" />,
-  // },
-  // {
-  //   title: "Assignments",
-  //   href: "/dashboard/assignments",
-  //   icon: <FileText className="h-4 w-4" />,
-  //   badge: "8",
-  // },
-  // {
-  //   title: "Grades",
-  //   href: "/dashboard/grades",
-  //   icon: <Award className="h-4 w-4" />,
-  // },
-  // {
-  //   title: "Analytics",
-  //   href: "/dashboard/analytics",
-  //   icon: <BarChart3 className="h-4 w-4" />,
-  // },
-  // {
-  //   title: "Reports",
-  //   href: "/dashboard/reports",
-  //   icon: <TrendingUp className="h-4 w-4" />,
-  // },
-  // {
-  //   title: "Messages",
-  //   href: "/dashboard/messages",
-  //   icon: <MessageSquare className="h-4 w-4" />,
-  //   badge: "3",
-  // },
-  // {
-  //   title: "Notifications",
-  //   href: "/dashboard/notifications",
-  //   icon: <Bell className="h-4 w-4" />,
-  //   badge: "5",
-  // },
-  // {
-  //   title: "Settings",
-  //   href: "/dashboard/settings",
-  //   icon: <Settings className="h-4 w-4" />,
-  // },
+  {
+    title: "Manage Team",
+    module: "manage-team",
+    href: MODULE_ROUTES["manage-team"],
+    icon: <UserCog className="h-4 w-4" />,
+  },
 ];
 
 export default function DashboardSidebar() {
@@ -127,10 +107,22 @@ export default function DashboardSidebar() {
   const [isOpen, setIsOpen] = useState(false); // mobile
   const [collapsed, setCollapsed] = useState(false); // desktop
 
+  const visibleItems = useMemo(() => {
+    const allowed = new Set(getNavModulesForRole(user?.role));
+    return sidebarItems.filter((item) => allowed.has(item.module));
+  }, [user?.role]);
+
+  const isItemActive = (href: string) => {
+    if (href === "/dashboard") {
+      return pathname === "/dashboard";
+    }
+    return pathname === href || pathname.startsWith(`${href}/`);
+  };
+
   const renderMenuItems = () => (
     <nav className="space-y-1">
-      {sidebarItems.map((item) => {
-        const isActive = pathname === item.href;
+      {visibleItems.map((item) => {
+        const isActive = isItemActive(item.href);
         return (
           <Link
             key={item.href}
@@ -172,7 +164,9 @@ export default function DashboardSidebar() {
             <p className="text-sm font-medium truncate">
               {user?.name || "Admin"}
             </p>
-            <p className="text-xs text-gray-500 truncate">{user?.email}</p>
+            <p className="text-xs text-gray-500 truncate capitalize">
+              {user?.role ? `${user.role} · ${user.email}` : user?.email}
+            </p>
           </div>
         )}
       </div>

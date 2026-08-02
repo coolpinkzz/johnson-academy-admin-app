@@ -1,0 +1,365 @@
+"use client";
+
+import React, { useEffect, useState } from "react";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { useModal } from "@/hooks/use-modal";
+import { updateTeamMember, UpdateTeamMemberPayload } from "@/services/team";
+import { User } from "@/types/user";
+import {
+  isStaffRole,
+  STAFF_ROLE_LABELS,
+  STAFF_ROLES,
+  StaffRole,
+} from "@/lib/rbac";
+import { STUDENT_BRANCHES } from "@/services/student";
+import { useAuth } from "@/services/auth";
+import { Eye, EyeOff } from "lucide-react";
+import { useMutation, useQueryClient } from "@tanstack/react-query";
+import { AxiosError } from "axios";
+import { toast } from "react-toastify";
+
+interface FormState {
+  name: string;
+  email: string;
+  password: string;
+  role: StaffRole;
+  department: string;
+  phoneNumber: string;
+  isActive: boolean;
+  branchAccess: number[];
+}
+
+type FormErrors = Partial<Record<keyof FormState, string>>;
+
+const PHONE_PATTERN = /^\+?[\d\s-()]+$/;
+const EMAIL_PATTERN = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+const PASSWORD_PATTERN = /^(?=.*[A-Za-z])(?=.*\d).{8,}$/;
+
+const needsBranchAccess = (role: StaffRole) =>
+  role === "admin" || role === "aqsd";
+
+function memberId(member: User) {
+  return member.id || member._id;
+}
+
+interface EditTeamMemberFormProps {
+  member: User;
+  submitLabel?: string;
+}
+
+export function EditTeamMemberForm({
+  member,
+  submitLabel = "Save changes",
+}: EditTeamMemberFormProps) {
+  const { closeModal } = useModal();
+  const { user: currentUser } = useAuth();
+  const queryClient = useQueryClient();
+  const [showPassword, setShowPassword] = useState(false);
+  const isSelf = memberId(member) === (currentUser?.id || "");
+
+  const initialRole: StaffRole = isStaffRole(member.role)
+    ? member.role
+    : "admin";
+
+  const [formData, setFormData] = useState<FormState>({
+    name: member.name || "",
+    email: member.email || "",
+    password: "",
+    role: initialRole,
+    department: member.department || "General",
+    phoneNumber: member.phoneNumber || "",
+    isActive: member.isActive !== false,
+    branchAccess: member.branchAccess ?? [],
+  });
+  const [errors, setErrors] = useState<FormErrors>({});
+
+  useEffect(() => {
+    setFormData({
+      name: member.name || "",
+      email: member.email || "",
+      password: "",
+      role: isStaffRole(member.role) ? member.role : "admin",
+      department: member.department || "General",
+      phoneNumber: member.phoneNumber || "",
+      isActive: member.isActive !== false,
+      branchAccess: member.branchAccess ?? [],
+    });
+  }, [member]);
+
+  const validateForm = (): boolean => {
+    const next: FormErrors = {};
+
+    if (!formData.name.trim()) next.name = "Name is required";
+    if (!formData.email.trim()) {
+      next.email = "Email is required";
+    } else if (!EMAIL_PATTERN.test(formData.email)) {
+      next.email = "Please enter a valid email address";
+    }
+
+    if (formData.password && !PASSWORD_PATTERN.test(formData.password)) {
+      next.password =
+        "Password must be at least 8 characters and include a letter and a number";
+    }
+
+    if (!formData.department.trim()) {
+      next.department = "Department is required";
+    }
+
+    if (formData.phoneNumber && !PHONE_PATTERN.test(formData.phoneNumber)) {
+      next.phoneNumber = "Please enter a valid phone number";
+    }
+
+    if (isSelf && formData.role !== "master") {
+      next.role = "You cannot change your own master role";
+    }
+
+    if (needsBranchAccess(formData.role) && formData.branchAccess.length === 0) {
+      next.branchAccess = "Select at least one branch";
+    }
+
+    setErrors(next);
+    return Object.keys(next).length === 0;
+  };
+
+  const mutation = useMutation({
+    mutationFn: (payload: UpdateTeamMemberPayload) =>
+      updateTeamMember(memberId(member), payload),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["team-members"] });
+      toast.success("Team member updated");
+      closeModal();
+    },
+    onError: (error) => {
+      const ax = error as AxiosError<{ message?: string }>;
+      toast.error(
+        ax.response?.data?.message ||
+          (error instanceof Error ? error.message : null) ||
+          "Failed to update team member",
+      );
+    },
+  });
+
+  const handleSubmit = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!validateForm()) return;
+
+    const payload: UpdateTeamMemberPayload = {
+      name: formData.name.trim(),
+      email: formData.email.trim().toLowerCase(),
+      role: formData.role,
+      department: formData.department.trim(),
+      isActive: formData.isActive,
+      ...(formData.password ? { password: formData.password } : {}),
+      ...(formData.phoneNumber.trim()
+        ? { phoneNumber: formData.phoneNumber.trim() }
+        : {}),
+      ...(needsBranchAccess(formData.role)
+        ? { branchAccess: formData.branchAccess }
+        : {}),
+    };
+
+    mutation.mutate(payload);
+  };
+
+  const setField = <K extends keyof FormState>(key: K, value: FormState[K]) => {
+    setFormData((prev) => ({ ...prev, [key]: value }));
+    if (errors[key]) {
+      setErrors((prev) => ({ ...prev, [key]: undefined }));
+    }
+  };
+
+  const toggleBranch = (branch: number) => {
+    setFormData((prev) => {
+      const has = prev.branchAccess.includes(branch);
+      return {
+        ...prev,
+        branchAccess: has
+          ? prev.branchAccess.filter((b) => b !== branch)
+          : [...prev.branchAccess, branch].sort((a, b) => a - b),
+      };
+    });
+    if (errors.branchAccess) {
+      setErrors((prev) => ({ ...prev, branchAccess: undefined }));
+    }
+  };
+
+  return (
+    <form onSubmit={handleSubmit} className="space-y-4">
+      <div>
+        <label className="block text-sm font-medium text-gray-700 mb-1">
+          Name *
+        </label>
+        <Input
+          value={formData.name}
+          onChange={(e) => setField("name", e.target.value)}
+          className={errors.name ? "border-red-500" : ""}
+        />
+        {errors.name && (
+          <p className="text-sm text-red-600 mt-1">{errors.name}</p>
+        )}
+      </div>
+
+      <div>
+        <label className="block text-sm font-medium text-gray-700 mb-1">
+          Email *
+        </label>
+        <Input
+          type="email"
+          value={formData.email}
+          onChange={(e) => setField("email", e.target.value)}
+          className={errors.email ? "border-red-500" : ""}
+        />
+        {errors.email && (
+          <p className="text-sm text-red-600 mt-1">{errors.email}</p>
+        )}
+      </div>
+
+      <div>
+        <label className="block text-sm font-medium text-gray-700 mb-1">
+          New password
+        </label>
+        <div className="relative">
+          <Input
+            type={showPassword ? "text" : "password"}
+            value={formData.password}
+            onChange={(e) => setField("password", e.target.value)}
+            placeholder="Leave blank to keep current"
+            className={errors.password ? "border-red-500 pr-10" : "pr-10"}
+          />
+          <button
+            type="button"
+            onClick={() => setShowPassword((v) => !v)}
+            className="absolute inset-y-0 right-0 flex items-center pr-3 text-gray-400 hover:text-gray-600"
+            aria-label={showPassword ? "Hide password" : "Show password"}
+          >
+            {showPassword ? (
+              <EyeOff className="h-4 w-4" />
+            ) : (
+              <Eye className="h-4 w-4" />
+            )}
+          </button>
+        </div>
+        {errors.password && (
+          <p className="text-sm text-red-600 mt-1">{errors.password}</p>
+        )}
+      </div>
+
+      <div>
+        <label className="block text-sm font-medium text-gray-700 mb-1">
+          Role *
+        </label>
+        <select
+          value={formData.role}
+          onChange={(e) => setField("role", e.target.value as StaffRole)}
+          disabled={isSelf}
+          className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 disabled:bg-gray-100 disabled:cursor-not-allowed"
+        >
+          {STAFF_ROLES.map((role) => (
+            <option key={role} value={role}>
+              {STAFF_ROLE_LABELS[role]}
+            </option>
+          ))}
+        </select>
+        {errors.role && (
+          <p className="text-sm text-red-600 mt-1">{errors.role}</p>
+        )}
+        {isSelf && (
+          <p className="text-xs text-gray-500 mt-1">
+            You cannot change your own role.
+          </p>
+        )}
+      </div>
+
+      {needsBranchAccess(formData.role) && (
+        <div>
+          <label className="block text-sm font-medium text-gray-700 mb-1">
+            Branch access *
+          </label>
+          <div className="flex flex-wrap gap-3">
+            {STUDENT_BRANCHES.map((branch) => {
+              const value = Number(branch);
+              const checked = formData.branchAccess.includes(value);
+              return (
+                <label
+                  key={branch}
+                  className="inline-flex items-center gap-2 text-sm text-gray-700"
+                >
+                  <input
+                    type="checkbox"
+                    checked={checked}
+                    onChange={() => toggleBranch(value)}
+                    className="rounded border-gray-300 text-blue-600 focus:ring-blue-500"
+                  />
+                  Branch {branch}
+                </label>
+              );
+            })}
+          </div>
+          {errors.branchAccess && (
+            <p className="text-sm text-red-600 mt-1">{errors.branchAccess}</p>
+          )}
+        </div>
+      )}
+
+      <div>
+        <label className="block text-sm font-medium text-gray-700 mb-1">
+          Department *
+        </label>
+        <Input
+          value={formData.department}
+          onChange={(e) => setField("department", e.target.value)}
+          className={errors.department ? "border-red-500" : ""}
+        />
+        {errors.department && (
+          <p className="text-sm text-red-600 mt-1">{errors.department}</p>
+        )}
+      </div>
+
+      <div>
+        <label className="block text-sm font-medium text-gray-700 mb-1">
+          Phone
+        </label>
+        <Input
+          value={formData.phoneNumber}
+          onChange={(e) => setField("phoneNumber", e.target.value)}
+          className={errors.phoneNumber ? "border-red-500" : ""}
+        />
+        {errors.phoneNumber && (
+          <p className="text-sm text-red-600 mt-1">{errors.phoneNumber}</p>
+        )}
+      </div>
+
+      <div className="flex items-center gap-2">
+        <input
+          id="team-member-active"
+          type="checkbox"
+          checked={formData.isActive}
+          onChange={(e) => setField("isActive", e.target.checked)}
+          disabled={isSelf}
+          className="rounded border-gray-300 text-blue-600 focus:ring-blue-500"
+        />
+        <label
+          htmlFor="team-member-active"
+          className="text-sm font-medium text-gray-700"
+        >
+          Active
+        </label>
+      </div>
+
+      <div className="flex justify-end gap-2 pt-2">
+        <Button
+          type="button"
+          variant="outline"
+          onClick={() => closeModal()}
+          disabled={mutation.isPending}
+        >
+          Cancel
+        </Button>
+        <Button type="submit" disabled={mutation.isPending}>
+          {mutation.isPending ? "Saving…" : submitLabel}
+        </Button>
+      </div>
+    </form>
+  );
+}

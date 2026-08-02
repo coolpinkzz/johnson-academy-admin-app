@@ -2,7 +2,8 @@
 
 import { client } from "@/services/api-client";
 import AuthService, { LoginResponse } from "@/services/auth";
-import { useMutation, useQuery } from "@tanstack/react-query";
+import { getDefaultRouteForRole, isStaffRole } from "@/lib/rbac";
+import { useMutation } from "@tanstack/react-query";
 import { useRouter } from "next/navigation";
 import React, { useState } from "react";
 import { useForm } from "react-hook-form";
@@ -18,49 +19,55 @@ interface LoginFormData {
 const LoginPage = () => {
   const router = useRouter();
   const [showPassword, setShowPassword] = useState(false);
+  const [accessError, setAccessError] = useState<string | null>(null);
   const {
     register,
     handleSubmit,
-    watch,
     formState: { errors },
   } = useForm<LoginFormData>();
 
-  const email = watch("email");
-  const password = watch("password");
-
-  // Redirect if already authenticated
+  // Redirect if already authenticated staff
   React.useEffect(() => {
-    if (AuthService.isAuthenticated()) {
-      router.push("/dashboard");
+    if (!AuthService.isAuthenticated()) return;
+    const user = AuthService.getUser();
+    if (isStaffRole(user?.role)) {
+      router.replace(getDefaultRouteForRole(user.role));
+      return;
     }
+    AuthService.clearAuth();
   }, [router]);
 
-  // implement useMutation
-  const { isPending, error, data, mutate } = useMutation({
+  const { isPending, error, mutate } = useMutation({
     mutationFn: async (data: LoginFormData): Promise<LoginResponse> => {
       const response = await client("/auth/login", {
         method: "POST",
         data: data,
       });
 
-      // Extract the actual response data from ServerResponse
       return response as unknown as LoginResponse;
     },
     onSuccess: (data: LoginResponse) => {
-      console.log("Login successful:", data);
+      setAccessError(null);
 
-      // Store tokens and user data in cookies
+      if (!isStaffRole(data.user.role)) {
+        AuthService.clearAuth();
+        setAccessError(
+          "This portal is for admin, aqsd, and master accounts only."
+        );
+        return;
+      }
+
       AuthService.handleLoginSuccess(data);
-
-      // Redirect to dashboard
-      router.push("/dashboard");
+      router.replace(getDefaultRouteForRole(data.user.role));
     },
-    onError: (error) => {
-      console.error("Login failed:", error);
+    onError: (err) => {
+      console.error("Login failed:", err);
+      setAccessError(null);
     },
   });
 
   const onSubmit = (data: LoginFormData) => {
+    setAccessError(null);
     mutate(data);
   };
 
@@ -170,10 +177,11 @@ const LoginPage = () => {
             </button>
 
             {/* Error Display */}
-            {error && (
+            {(error || accessError) && (
               <div className="mt-4 p-3 bg-red-50 border border-red-200 rounded-lg">
                 <p className="text-sm text-red-600">
-                  Login failed. Please check your credentials and try again.
+                  {accessError ||
+                    "Login failed. Please check your credentials and try again."}
                 </p>
               </div>
             )}
@@ -181,7 +189,9 @@ const LoginPage = () => {
 
           {/* Footer */}
           <div className="mt-6 text-center">
-            <p className="text-sm text-gray-500">Protected admin access only</p>
+            <p className="text-sm text-gray-500">
+              Protected staff access (admin / aqsd / master)
+            </p>
           </div>
         </div>
       </div>

@@ -1,15 +1,17 @@
-// src/app/(auth)/dashboard/layout.tsx
-//add dashboard sidebar here
+"use client";
 
 import React from "react";
 import DashboardSidebar from "@/components/DashboardSidebar";
+import ProtectedRoute from "@/components/ProtectedRoute";
 
 const DashboardLayout = ({ children }: { children: React.ReactNode }) => {
   return (
-    <div className="flex h-screen bg-gray-50">
-      <DashboardSidebar />
-      <div className="flex-1 flex flex-col overflow-y-auto">{children}</div>
-    </div>
+    <ProtectedRoute enforceRoleAccess>
+      <div className="flex h-screen bg-gray-50">
+        <DashboardSidebar />
+        <div className="flex-1 flex flex-col overflow-y-auto">{children}</div>
+      </div>
+    </ProtectedRoute>
   );
 };
 

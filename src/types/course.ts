@@ -473,6 +473,7 @@ export interface Course {
   description: string;
   image: string;
   instrument: string;
+  level?: number;
   syllabus: Syllabus[];
   studentCount: number;
   id: string;
@@ -483,4 +484,14 @@ export interface UpdateCoursePayload {
   description: string;
   instrument: string;
   image: string;
+  level: number;
+}
+
+export interface CreateCoursePayload {
+  name: string;
+  description: string;
+  image: string;
+  instrument: string;
+  level: number;
+  syllabus?: string[];
 }

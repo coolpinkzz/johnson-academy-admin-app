@@ -67,14 +67,18 @@ export const useStudents = (
 };
 
 /** Lightweight counts for Total + each branch (limit=1, uses totalResults). */
-export const useStudentBranchCounts = () => {
+export const useStudentBranchCounts = (options?: {
+  branches?: StudentBranch[];
+}) => {
+  const branches = options?.branches ?? STUDENT_BRANCHES;
+
   const queries = useQueries({
     queries: [
       {
-        queryKey: ["students", "count", { branch: null }],
+        queryKey: ["students", "count", { branch: null, scope: branches }],
         queryFn: () => getStudents({ page: 1, limit: 1 }),
       },
-      ...STUDENT_BRANCHES.map((branch) => ({
+      ...branches.map((branch) => ({
         queryKey: ["students", "count", { branch }],
         queryFn: () => getStudents({ page: 1, limit: 1, branch }),
       })),
@@ -86,17 +90,17 @@ export const useStudentBranchCounts = () => {
   return {
     total: totalQuery?.data?.totalResults,
     isLoadingTotal: totalQuery?.isLoading ?? false,
+    branches,
     byBranch: Object.fromEntries(
-      STUDENT_BRANCHES.map((branch, index) => [
+      branches.map((branch, index) => [
         branch,
         {
           count: branchQueries[index]?.data?.totalResults,
           isLoading: branchQueries[index]?.isLoading ?? false,
         },
       ]),
-    ) as Record<
-      StudentBranch,
-      { count: number | undefined; isLoading: boolean }
+    ) as Partial<
+      Record<StudentBranch, { count: number | undefined; isLoading: boolean }>
     >,
     isLoading: queries.some((query) => query.isLoading),
   };

@@ -6,17 +6,19 @@ import { useModalContext } from "@/contexts/ModalContext";
 import { UserResponse } from "@/types/user";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { Plus, Search, Trash2, Eye } from "lucide-react";
-import React, { useState, useEffect, useRef } from "react";
+import React, { useState, useEffect, useRef, useMemo } from "react";
 import { useRouter } from "next/navigation";
 import { User } from "@/types/user";
 import {
   deleteStudent,
   searchStudents,
   useStudentsInfiniteQuery,
+  STUDENT_BRANCHES,
   type StudentBranch,
 } from "@/services/student";
 import { StudentForm } from "@/components/modal";
 import { StudentBranchCountCards } from "@/components/StudentBranchCountCards";
+import { useAuth } from "@/services/auth";
 import Image from "next/image";
 import avatarImage from "@/assets/avatar.png";
 import { PAGE_SIZE } from "@/constant";
@@ -26,12 +28,27 @@ const StudentsPage = () => {
   const { openModal, closeModal } = useModalContext();
   const queryClient = useQueryClient();
   const router = useRouter();
+  const { user: currentUser } = useAuth();
   const [isDeleting, setIsDeleting] = useState<string | null>(null);
   const [searchQuery, setSearchQuery] = useState<string>("");
   const [selectedBranch, setSelectedBranch] = useState<StudentBranch | null>(
     null,
   );
   const loadMoreRef = useRef<HTMLDivElement>(null);
+
+  const allowedBranches = useMemo(() => {
+    if (currentUser?.role === "admin" || currentUser?.role === "aqsd") {
+      const allowed = new Set((currentUser.branchAccess ?? []).map(String));
+      return STUDENT_BRANCHES.filter((branch) => allowed.has(branch));
+    }
+    return STUDENT_BRANCHES;
+  }, [currentUser?.role, currentUser?.branchAccess]);
+
+  useEffect(() => {
+    if (selectedBranch && !allowedBranches.includes(selectedBranch)) {
+      setSelectedBranch(null);
+    }
+  }, [allowedBranches, selectedBranch]);
 
   // Paginated list (when not searching)
   const {

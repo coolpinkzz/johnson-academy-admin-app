@@ -1,6 +1,10 @@
 import { AuthService } from "./auth";
 import { client } from "./api-client";
-import { CourseResponse, UpdateCoursePayload } from "@/types/course";
+import {
+  CourseResponse,
+  CreateCoursePayload,
+  UpdateCoursePayload,
+} from "@/types/course";
 
 // get all courses
 export const getCourses = async (): Promise<CourseResponse> => {
@@ -17,7 +21,9 @@ export const getCourses = async (): Promise<CourseResponse> => {
 };
 
 // create course
-export const createCourse = async (courseData: any): Promise<any> => {
+export const createCourse = async (
+  courseData: CreateCoursePayload,
+): Promise<unknown> => {
   const response = await client("/courses", {
     method: "POST",
     headers: {

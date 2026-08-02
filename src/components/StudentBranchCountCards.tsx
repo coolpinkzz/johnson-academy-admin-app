@@ -6,7 +6,9 @@ import {
   useStudentBranchCounts,
   type StudentBranch,
 } from "@/services/student";
+import { useAuth } from "@/services/auth";
 import { cn } from "@/lib/utils";
+import { useMemo } from "react";
 
 const BRANCH_TONES: Record<StudentBranch, StatCountTone> = {
   "1": "emerald",
@@ -21,12 +23,34 @@ interface StudentBranchCountCardsProps {
   className?: string;
 }
 
+function resolveVisibleBranches(
+  role: string | undefined,
+  branchAccess: number[] | undefined,
+): StudentBranch[] {
+  if (role === "master" || !role) {
+    return STUDENT_BRANCHES;
+  }
+  if (role === "admin" || role === "aqsd") {
+    const allowed = new Set((branchAccess ?? []).map(String));
+    return STUDENT_BRANCHES.filter((branch) => allowed.has(branch));
+  }
+  return STUDENT_BRANCHES;
+}
+
 export function StudentBranchCountCards({
   selectedBranch,
   onBranchChange,
   className,
 }: StudentBranchCountCardsProps) {
-  const { total, byBranch, isLoadingTotal } = useStudentBranchCounts();
+  const { user } = useAuth();
+  const visibleBranches = useMemo(
+    () => resolveVisibleBranches(user?.role, user?.branchAccess),
+    [user?.role, user?.branchAccess],
+  );
+
+  const { total, byBranch, isLoadingTotal } = useStudentBranchCounts({
+    branches: visibleBranches,
+  });
 
   const handleSelect = (branch: StudentBranch | null) => {
     if (branch === null) {
@@ -52,12 +76,12 @@ export function StudentBranchCountCards({
         onClick={() => handleSelect(null)}
       />
 
-      {STUDENT_BRANCHES.map((branch) => (
+      {visibleBranches.map((branch) => (
         <StatCountCard
           key={branch}
           label={`Branch ${branch}`}
-          count={byBranch[branch].count}
-          isLoading={byBranch[branch].isLoading}
+          count={byBranch[branch]?.count}
+          isLoading={byBranch[branch]?.isLoading ?? false}
           active={selectedBranch === branch}
           tone={BRANCH_TONES[branch]}
           onClick={() => handleSelect(branch)}

@@ -31,6 +31,7 @@ interface FormErrors {
   name?: string;
   description?: string;
   instrument?: string;
+  level?: string;
   image?: string;
 }
 
@@ -50,6 +51,11 @@ export function EditCourseForm({
   const [name, setName] = useState(course.name || "");
   const [description, setDescription] = useState(course.description || "");
   const [instrument, setInstrument] = useState(course.instrument || "");
+  const [level, setLevel] = useState(
+    course.level !== undefined && course.level !== null
+      ? String(course.level)
+      : "",
+  );
   const [image, setImage] = useState(course.image || "");
   const [errors, setErrors] = useState<FormErrors>({});
   const [isUploading, setIsUploading] = useState(false);
@@ -59,6 +65,11 @@ export function EditCourseForm({
     setName(course.name || "");
     setDescription(course.description || "");
     setInstrument(course.instrument || "");
+    setLevel(
+      course.level !== undefined && course.level !== null
+        ? String(course.level)
+        : "",
+    );
     setImage(course.image || "");
   }, [course]);
 
@@ -77,6 +88,13 @@ export function EditCourseForm({
 
     if (!instrument) {
       next.instrument = "Instrument is required";
+    }
+
+    const levelNum = Number(level);
+    if (level === "" || Number.isNaN(levelNum)) {
+      next.level = "Level is required";
+    } else if (!Number.isInteger(levelNum) || levelNum < 1) {
+      next.level = "Level must be a whole number of 1 or higher";
     }
 
     if (!image) {
@@ -160,6 +178,7 @@ export function EditCourseForm({
         description: description.trim(),
         instrument,
         image,
+        level: Number(level),
       });
     },
     onSuccess: () => {
@@ -313,6 +332,30 @@ export function EditCourseForm({
         </select>
         {errors.instrument && (
           <p className="text-sm text-red-600 mt-1">{errors.instrument}</p>
+        )}
+      </div>
+
+      <div>
+        <label className="block text-sm font-medium text-gray-700 mb-1">
+          Level *
+        </label>
+        <input
+          type="number"
+          min={1}
+          step={1}
+          value={level}
+          onChange={(e) => {
+            setLevel(e.target.value);
+            if (errors.level)
+              setErrors((prev) => ({ ...prev, level: undefined }));
+          }}
+          className={`w-full px-3 py-2 border rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 ${
+            errors.level ? "border-red-500" : "border-gray-300"
+          }`}
+          placeholder="e.g. 1"
+        />
+        {errors.level && (
+          <p className="text-sm text-red-600 mt-1">{errors.level}</p>
         )}
       </div>
 

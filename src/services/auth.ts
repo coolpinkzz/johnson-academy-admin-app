@@ -24,6 +24,7 @@ export interface User {
   courses: any[];
   progress: any[];
   subjects: any[];
+  branchAccess?: number[];
 }
 
 export interface LoginResponse {

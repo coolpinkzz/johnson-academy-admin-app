@@ -1,22 +1,48 @@
 "use client";
 
-import { useAuth } from "@/services/auth";
-import { useRouter } from "next/navigation";
+import AuthService, { useAuth } from "@/services/auth";
+import {
+  canAccessPath,
+  getDefaultRouteForRole,
+  isStaffRole,
+} from "@/lib/rbac";
+import { usePathname, useRouter } from "next/navigation";
 import { useEffect } from "react";
 
 interface ProtectedRouteProps {
   children: React.ReactNode;
+  /** When true, also enforce staff role + module path access (dashboard routes). */
+  enforceRoleAccess?: boolean;
 }
 
-const ProtectedRoute: React.FC<ProtectedRouteProps> = ({ children }) => {
-  const { isAuthenticated, isLoading } = useAuth();
+const ProtectedRoute: React.FC<ProtectedRouteProps> = ({
+  children,
+  enforceRoleAccess = false,
+}) => {
+  const { isAuthenticated, isLoading, user } = useAuth();
   const router = useRouter();
+  const pathname = usePathname();
 
   useEffect(() => {
-    if (!isLoading && !isAuthenticated) {
-      router.push("/login");
+    if (isLoading) return;
+
+    if (!isAuthenticated) {
+      router.replace("/login");
+      return;
     }
-  }, [isAuthenticated, isLoading, router]);
+
+    if (!enforceRoleAccess) return;
+
+    if (!isStaffRole(user?.role)) {
+      AuthService.clearAuth();
+      router.replace("/login");
+      return;
+    }
+
+    if (!canAccessPath(user.role, pathname)) {
+      router.replace(getDefaultRouteForRole(user.role));
+    }
+  }, [isAuthenticated, isLoading, enforceRoleAccess, user, pathname, router]);
 
   if (isLoading) {
     return (
@@ -30,7 +56,13 @@ const ProtectedRoute: React.FC<ProtectedRouteProps> = ({ children }) => {
   }
 
   if (!isAuthenticated) {
-    return null; // Will redirect to login
+    return null;
+  }
+
+  if (enforceRoleAccess) {
+    if (!isStaffRole(user?.role) || !canAccessPath(user.role, pathname)) {
+      return null;
+    }
   }
 
   return <>{children}</>;

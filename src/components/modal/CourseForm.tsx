@@ -2,20 +2,24 @@
 
 import React, { useState, useRef } from "react";
 import { Button } from "@/components/ui/button";
-import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { getSyllabus } from "@/services/syllabus";
-import { SyllabusResponse } from "@/types/syllabus";
+import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { uploadProfilePicture } from "@/services/upload";
 import { createCourse } from "@/services/course";
 import { useModal } from "@/components/modal";
+import { CreateCoursePayload } from "@/types/course";
+import { AxiosError } from "axios";
+import { toast } from "react-toastify";
 
 interface CourseFormData {
   name: string;
   description: string;
   image: string;
   instrument: string;
+  level: string;
   syllabus: string[];
 }
+
+type CourseFormErrors = Partial<Record<keyof CourseFormData, string>>;
 
 interface CourseFormProps {
   onSubmit?: (data: CourseFormData) => void;
@@ -38,32 +42,31 @@ export function CourseForm({
     description: initialData.description || "",
     image: initialData.image || "",
     instrument: initialData.instrument || "",
+    level: initialData.level || "",
     syllabus: initialData.syllabus || [],
   });
 
-  const [errors, setErrors] = useState<Partial<CourseFormData>>({});
+  const [errors, setErrors] = useState<CourseFormErrors>({});
   const [isUploading, setIsUploading] = useState(false);
   const [uploadProgress, setUploadProgress] = useState(0);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const queryClient = useQueryClient();
-  // Fetch syllabi for selection
-  const { data: syllabusData, isLoading: syllabusLoading } = useQuery({
-    queryKey: ["syllabus"],
-    queryFn: () => getSyllabus(),
-    enabled: true,
-  });
 
-  // create course
   const { mutate: createCourseMutation, isPending: isCreatingCourse } =
     useMutation({
-      mutationFn: (data: CourseFormData) => createCourse(data),
-      onSuccess: (data) => {
-        console.log("Course created successfully", data);
+      mutationFn: (data: CreateCoursePayload) => createCourse(data),
+      onSuccess: () => {
+        toast.success("Course created successfully");
         closeModal();
         queryClient.invalidateQueries({ queryKey: ["courses"] });
       },
       onError: (error) => {
-        console.error("Error creating course:", error);
+        const ax = error as AxiosError<{ message?: string }>;
+        toast.error(
+          ax.response?.data?.message ||
+            (error instanceof Error ? error.message : null) ||
+            "Failed to create course. Try again.",
+        );
       },
     });
 
@@ -81,7 +84,7 @@ export function CourseForm({
   ];
 
   const validateForm = (): boolean => {
-    const newErrors: Partial<CourseFormData> = {};
+    const newErrors: CourseFormErrors = {};
 
     if (!formData.name.trim()) {
       newErrors.name = "Course name is required";
@@ -95,6 +98,13 @@ export function CourseForm({
 
     if (!formData.instrument) {
       newErrors.instrument = "Instrument is required";
+    }
+
+    const levelNum = Number(formData.level);
+    if (formData.level === "" || Number.isNaN(levelNum)) {
+      newErrors.level = "Level is required";
+    } else if (!Number.isInteger(levelNum) || levelNum < 1) {
+      newErrors.level = "Level must be a whole number of 1 or higher";
     }
 
     if (!formData.image) {
@@ -112,7 +122,6 @@ export function CourseForm({
     setUploadProgress(0);
 
     try {
-      // Simulate upload progress
       const progressInterval = setInterval(() => {
         setUploadProgress((prev) => Math.min(prev + 10, 90));
       }, 100);
@@ -126,10 +135,8 @@ export function CourseForm({
       clearInterval(progressInterval);
       setUploadProgress(100);
 
-      // Set the image URL from the upload response
       setFormData((prev) => ({ ...prev, image: response.data.url }));
 
-      // Clear any image-related errors
       if (errors.image) {
         setErrors((prev) => ({ ...prev, image: undefined }));
       }
@@ -145,7 +152,6 @@ export function CourseForm({
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (file) {
-      // Validate file type
       if (!file.type.startsWith("image/")) {
         setErrors((prev) => ({
           ...prev,
@@ -154,7 +160,6 @@ export function CourseForm({
         return;
       }
 
-      // Validate file size (max 5MB)
       if (file.size > 5 * 1024 * 1024) {
         setErrors((prev) => ({
           ...prev,
@@ -170,37 +175,29 @@ export function CourseForm({
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
 
-    if (validateForm()) {
-      // If image is still uploading, wait for it to complete
-      if (isUploading) {
-        return;
-      }
-
-      createCourseMutation(formData);
+    if (!validateForm() || isUploading) {
+      return;
     }
+
+    const payload: CreateCoursePayload = {
+      name: formData.name.trim(),
+      description: formData.description.trim(),
+      image: formData.image,
+      instrument: formData.instrument,
+      level: Number(formData.level),
+      ...(formData.syllabus.length > 0 ? { syllabus: formData.syllabus } : {}),
+    };
+
+    onSubmit?.(formData);
+    createCourseMutation(payload);
   };
 
-  const handleInputChange = (
-    field: keyof CourseFormData,
-    value: string | string[],
-  ) => {
+  const handleInputChange = (field: keyof CourseFormData, value: string) => {
     setFormData((prev) => ({ ...prev, [field]: value }));
 
-    // Clear error when user starts typing
     if (errors[field]) {
       setErrors((prev) => ({ ...prev, [field]: undefined }));
     }
-  };
-
-  const handleSyllabusSelection = (syllabusId: string) => {
-    setFormData((prev) => {
-      const currentSyllabi = prev.syllabus;
-      const newSyllabi = currentSyllabi.includes(syllabusId)
-        ? currentSyllabi.filter((id) => id !== syllabusId)
-        : [...currentSyllabi, syllabusId];
-
-      return { ...prev, syllabus: newSyllabi };
-    });
   };
 
   const removeImage = () => {
@@ -212,7 +209,6 @@ export function CourseForm({
 
   return (
     <form onSubmit={handleSubmit} className="space-y-6">
-      {/* Course Name */}
       <div>
         <label className="block text-sm font-medium text-gray-700 mb-1">
           Course Name *
@@ -231,7 +227,6 @@ export function CourseForm({
         )}
       </div>
 
-      {/* Instrument */}
       <div>
         <label className="block text-sm font-medium text-gray-700 mb-1">
           Instrument *
@@ -255,7 +250,26 @@ export function CourseForm({
         )}
       </div>
 
-      {/* Description */}
+      <div>
+        <label className="block text-sm font-medium text-gray-700 mb-1">
+          Level *
+        </label>
+        <input
+          type="number"
+          min={1}
+          step={1}
+          value={formData.level}
+          onChange={(e) => handleInputChange("level", e.target.value)}
+          className={`w-full px-3 py-2 border rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 ${
+            errors.level ? "border-red-500" : "border-gray-300"
+          }`}
+          placeholder="e.g. 1"
+        />
+        {errors.level && (
+          <p className="text-sm text-red-600 mt-1">{errors.level}</p>
+        )}
+      </div>
+
       <div>
         <label className="block text-sm font-medium text-gray-700 mb-1">
           Description *
@@ -274,7 +288,6 @@ export function CourseForm({
         )}
       </div>
 
-      {/* Image Upload */}
       <div>
         <label className="block text-sm font-medium text-gray-700 mb-1">
           Course Image *
@@ -354,42 +367,6 @@ export function CourseForm({
         )}
       </div>
 
-      {/* Syllabus Selection */}
-      {/* <div>
-        <label className="block text-sm font-medium text-gray-700 mb-2">
-          Select Syllabi
-        </label>
-        <div className="max-h-40 overflow-y-auto border border-gray-300 rounded-md p-3">
-          {syllabusLoading ? (
-            <p className="text-sm text-gray-500">Loading syllabi...</p>
-          ) : syllabusData?.length > 0 ? (
-            syllabusData.map((syllabus: SyllabusResponse) => (
-              <label
-                key={syllabus._id || syllabus.id}
-                className="flex items-center space-x-2 py-1"
-              >
-                <input
-                  type="checkbox"
-                  checked={formData.syllabus.includes(
-                    syllabus._id || syllabus.id,
-                  )}
-                  onChange={() =>
-                    handleSyllabusSelection(syllabus._id || syllabus.id)
-                  }
-                  className="rounded border-gray-300 text-blue-600 focus:ring-blue-500"
-                />
-                <span className="text-sm text-gray-700">{syllabus.title}</span>
-              </label>
-            ))
-          ) : (
-            <p className="text-sm text-gray-500">
-              {syllabusLoading ? "Loading syllabi..." : "No syllabi available"}
-            </p>
-          )}
-        </div>
-      </div> */}
-
-      {/* Form Actions */}
       <div className="flex justify-end space-x-2 pt-4">
         <Button
           type="button"
