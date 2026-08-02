@@ -125,12 +125,12 @@ export function getModuleFromPath(pathname: string): DashboardModule | null {
   if (path === "/dashboard") return "dashboard";
 
   const entries = (Object.entries(MODULE_ROUTES) as [DashboardModule, string][])
-    .filter(([module]) => module !== "dashboard")
+    .filter(([dashboardModule]) => dashboardModule !== "dashboard")
     .sort((a, b) => b[1].length - a[1].length);
 
-  for (const [module, route] of entries) {
+  for (const [dashboardModule, route] of entries) {
     if (path === route || path.startsWith(`${route}/`)) {
-      return module;
+      return dashboardModule;
     }
   }
 
@@ -140,13 +140,13 @@ export function getModuleFromPath(pathname: string): DashboardModule | null {
 export function canAccessPath(role: string | undefined | null, pathname: string): boolean {
   if (!isStaffRole(role)) return false;
 
-  const module = getModuleFromPath(pathname);
-  if (!module) {
+  const dashboardModule = getModuleFromPath(pathname);
+  if (!dashboardModule) {
     // Unknown dashboard subpaths (e.g. /dashboard/test) — deny
     return false;
   }
 
-  return canAccessModule(role, module);
+  return canAccessModule(role, dashboardModule);
 }
 
 /** First allowed nav route for a staff role (aqsd has no dashboard). */
@@ -154,13 +154,13 @@ export function getDefaultRouteForRole(role: string | undefined | null): string 
   if (!isStaffRole(role)) return "/login";
 
   const allowed = getModulesForRole(role);
-  const firstNav = NAV_MODULES.find((module) => allowed.includes(module));
+  const firstNav = NAV_MODULES.find((dashboardModule) => allowed.includes(dashboardModule));
   return firstNav ? MODULE_ROUTES[firstNav] : "/login";
 }
 
 export function getNavModulesForRole(role: string | undefined | null): DashboardModule[] {
   const allowed = getModulesForRole(role);
-  return NAV_MODULES.filter((module) => allowed.includes(module));
+  return NAV_MODULES.filter((dashboardModule) => allowed.includes(dashboardModule));
 }
 
 export const STAFF_ROLE_LABELS: Record<StaffRole, string> = {
