@@ -23,6 +23,8 @@ export { SyllabusForm } from "./SyllabusForm";
 export { ClassForm } from "./ClassForm";
 export { BulkAddStudentsModal } from "./BulkAddStudentsModal";
 export { AddSingleStudentToClassModal } from "./AddSingleStudentToClassModal";
+export { MoveStudentToClassModal } from "./MoveStudentToClassModal";
+export { ViewStudentsInClassModal } from "./ViewStudentsInClassModal";
 export { default as StudentProgressModal } from "./StudentProgressModal";
 export { BookCompensationModal } from "./BookCompensationModal";
 export {

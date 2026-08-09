@@ -229,6 +229,25 @@ export const removeStudentFromClass = async (
   return response;
 };
 
+export const transferStudentToClass = async (
+  fromClassId: string,
+  studentId: string,
+  targetClassId: string,
+) => {
+  const response = await client(`/classes/${fromClassId}/transfer-student`, {
+    method: "POST",
+    headers: {
+      Authorization: `Bearer ${AuthService.getAccessToken()}`,
+    },
+    data: {
+      studentId,
+      targetClassId,
+    },
+  });
+
+  return response;
+};
+
 function getAxiosErrorMessage(
   error: AxiosError<{ message?: string }>,
   fallback: string,
@@ -281,6 +300,30 @@ export const useRemoveStudentFromClass = () => {
     onError: (error: AxiosError<{ message: string }>) => {
       toast.error(
         getAxiosErrorMessage(error, "Error removing student from class"),
+      );
+    },
+  });
+};
+
+export const useTransferStudentToClass = () => {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: ({
+      fromClassId,
+      studentId,
+      targetClassId,
+    }: {
+      fromClassId: string;
+      studentId: string;
+      targetClassId: string;
+    }) => transferStudentToClass(fromClassId, studentId, targetClassId),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["classes"] });
+      toast.success("Student moved to the new class successfully");
+    },
+    onError: (error: AxiosError<{ message: string }>) => {
+      toast.error(
+        getAxiosErrorMessage(error, "Error moving student to another class"),
       );
     },
   });
