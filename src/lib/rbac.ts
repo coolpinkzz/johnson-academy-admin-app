@@ -163,6 +163,13 @@ export function getNavModulesForRole(role: string | undefined | null): Dashboard
   return NAV_MODULES.filter((dashboardModule) => allowed.includes(dashboardModule));
 }
 
+/** Packages & payments (BE rights getStudentFees / manageStudentFees). */
+const STUDENT_FEE_ROLES: readonly StaffRole[] = ["admin", "master"];
+
+export function canManageStudentFees(role: string | undefined | null): boolean {
+  return isStaffRole(role) && STUDENT_FEE_ROLES.includes(role);
+}
+
 export const STAFF_ROLE_LABELS: Record<StaffRole, string> = {
   admin: "Admin",
   aqsd: "AQSD",

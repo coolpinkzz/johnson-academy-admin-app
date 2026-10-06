@@ -3,7 +3,9 @@
 import ProtectedRoute from "@/components/ProtectedRoute";
 import StudentDetailLoading from "@/components/StudentDetailLoading";
 import { useAuth } from "@/services/auth";
+import { canManageStudentFees } from "@/lib/rbac";
 import { User } from "@/types/user";
+import { StudentFeesSection } from "@/components/fees/StudentFeesSection";
 import { useQuery } from "@tanstack/react-query";
 import {
   ArrowLeft,
@@ -293,6 +295,13 @@ const StudentDetailPage = () => {
                 </div>
               </div>
             </div>
+
+            {canManageStudentFees(user?.role) ? (
+              <StudentFeesSection
+                studentId={studentId}
+                enrolledCourses={student.courses ?? []}
+              />
+            ) : null}
 
             {/* Academic Information */}
             <div className="bg-white rounded-lg shadow-sm border">

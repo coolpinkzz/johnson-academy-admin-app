@@ -103,8 +103,8 @@ export function CourseForm({
     const levelNum = Number(formData.level);
     if (formData.level === "" || Number.isNaN(levelNum)) {
       newErrors.level = "Level is required";
-    } else if (!Number.isInteger(levelNum) || levelNum < 1) {
-      newErrors.level = "Level must be a whole number of 1 or higher";
+    } else if (!Number.isInteger(levelNum) || levelNum < 0) {
+      newErrors.level = "Level must be a whole number of 0 or higher";
     }
 
     if (!formData.image) {
@@ -256,7 +256,7 @@ export function CourseForm({
         </label>
         <input
           type="number"
-          min={1}
+          min={0}
           step={1}
           value={formData.level}
           onChange={(e) => handleInputChange("level", e.target.value)}

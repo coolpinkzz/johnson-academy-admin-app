@@ -12,15 +12,9 @@ import type {
   GetCompensationBookingsParams,
   ListAvailableClassesParams,
 } from "@/types/compensation";
+import { getApiErrorMessage } from "@/lib/utils";
 import { AuthService } from "./auth";
 import { client } from "./api-client";
-
-function getAxiosErrorMessage(
-  error: AxiosError<{ message?: string }>,
-  fallback: string,
-): string {
-  return error?.response?.data?.message || fallback;
-}
 
 function authHeaders() {
   return {
@@ -183,9 +177,7 @@ export const useCreateCompensationBooking = () => {
       toast.success("Compensation booked successfully");
     },
     onError: (error: AxiosError<{ message?: string }>) => {
-      toast.error(
-        getAxiosErrorMessage(error, "Failed to book compensation"),
-      );
+      toast.error(getApiErrorMessage(error, "Failed to book compensation"));
     },
   });
 };
@@ -201,7 +193,7 @@ export const useCancelCompensationBooking = () => {
     },
     onError: (error: AxiosError<{ message?: string }>) => {
       toast.error(
-        getAxiosErrorMessage(error, "Failed to cancel compensation booking"),
+        getApiErrorMessage(error, "Failed to cancel compensation booking"),
       );
     },
   });

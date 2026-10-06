@@ -8,6 +8,7 @@ import { useModal } from "@/hooks/use-modal";
 import { deleteTeacher, getTeachers } from "@/services/teacher";
 import { Bell, Plus, Search, Edit, Trash2 } from "lucide-react";
 import Image from "next/image";
+import { useRouter } from "next/navigation";
 import React, { useMemo, useState } from "react";
 import { User, UserResponse } from "@/types/user";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
@@ -16,6 +17,7 @@ import { toast } from "react-toastify";
 const TeacherPage = () => {
   const { openModal, closeModal } = useModal();
   const queryClient = useQueryClient();
+  const router = useRouter();
   const [deletingId, setDeletingId] = useState<string | null>(null);
   const [searchTerm, setSearchTerm] = useState("");
   const {
@@ -44,6 +46,12 @@ const TeacherPage = () => {
       return name.includes(query) || email.includes(query);
     });
   }, [teachers?.results, searchTerm]);
+
+  const handleViewTeacher = (teacher: User) => {
+    const userId = teacherUserId(teacher);
+    if (!userId) return;
+    router.push(`/dashboard/teachers/${userId}`);
+  };
 
   const handleAddTeacher = () => {
     openModal({
@@ -190,7 +198,18 @@ const TeacherPage = () => {
                     </tr>
                   ) : (
                     filteredTeachers.map((teacher) => (
-                    <tr key={teacher?._id} className="hover:bg-gray-50">
+                    <tr
+                      key={teacher?._id}
+                      onClick={() => handleViewTeacher(teacher)}
+                      onKeyDown={(event) => {
+                        if (event.key === "Enter" || event.key === " ") {
+                          event.preventDefault();
+                          handleViewTeacher(teacher);
+                        }
+                      }}
+                      tabIndex={0}
+                      className="hover:bg-gray-50 cursor-pointer focus-visible:outline focus-visible:outline-2 focus-visible:-outline-offset-2 focus-visible:outline-blue-500"
+                    >
                       <td className="px-6 py-4 whitespace-nowrap">
                         <div className="flex items-center">
                           {teacher.profilePicture ? (
@@ -236,7 +255,11 @@ const TeacherPage = () => {
                         {teacher.courses.length}
                       </td>
                       <td className="px-6 py-4 whitespace-nowrap text-sm font-medium">
-                        <div className="flex flex-wrap items-center gap-2">
+                        <div
+                          className="flex flex-wrap items-center gap-2"
+                          onClick={(event) => event.stopPropagation()}
+                          onKeyDown={(event) => event.stopPropagation()}
+                        >
                           <button
                             type="button"
                             onClick={() => handleEditTeacher(teacher)}

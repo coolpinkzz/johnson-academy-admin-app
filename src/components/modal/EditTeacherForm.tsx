@@ -119,6 +119,7 @@ export function EditTeacherForm({
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["teachers"] });
+      queryClient.invalidateQueries({ queryKey: ["teacher"] });
       toast.success("Teacher updated successfully");
       closeModal();
     },

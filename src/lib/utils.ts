@@ -1,5 +1,14 @@
 import { clsx, type ClassValue } from "clsx"
 import { twMerge } from "tailwind-merge"
+import type { AxiosError } from "axios"
+
+/** Server error message from an API call, or `fallback`. */
+export function getApiErrorMessage(error: unknown, fallback: string): string {
+  return (
+    (error as AxiosError<{ message?: string }>)?.response?.data?.message ||
+    fallback
+  )
+}
 
 export function cn(...inputs: ClassValue[]) {
   return twMerge(clsx(inputs))

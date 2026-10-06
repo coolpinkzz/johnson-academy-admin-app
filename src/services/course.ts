@@ -1,3 +1,4 @@
+import { useQuery } from "@tanstack/react-query";
 import { AuthService } from "./auth";
 import { client } from "./api-client";
 import {
@@ -18,6 +19,15 @@ export const getCourses = async (): Promise<CourseResponse> => {
   });
 
   return response as unknown as CourseResponse;
+};
+
+export const useCourses = (options?: { enabled?: boolean }) => {
+  const { enabled = true } = options ?? {};
+  return useQuery<CourseResponse>({
+    queryKey: ["courses"],
+    queryFn: getCourses,
+    enabled,
+  });
 };
 
 // create course

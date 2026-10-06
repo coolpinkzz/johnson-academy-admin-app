@@ -12,6 +12,17 @@ export interface UpdateTeacherProfileData {
   phoneNumber?: string;
 }
 
+export const getTeacherById = async (teacherId: string): Promise<User> => {
+  const response: ServerResponse<User> = await client(`/users/${teacherId}`, {
+    method: "GET",
+    headers: {
+      Authorization: `Bearer ${AuthService.getAccessToken()}`,
+    },
+  });
+
+  return response as unknown as User;
+};
+
 export const getTeachers = async (): Promise<UserResponse> => {
   const response: ServerResponse<UserResponse> = await client(
     "/users?role=teacher",
