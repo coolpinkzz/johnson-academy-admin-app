@@ -100,7 +100,7 @@ export type TeacherTimetableModel = {
   unscheduled: UnscheduledClass[];
 };
 
-function emptyDays(): Record<ClassWeekday, TimetableBlock[]> {
+function emptyDays<T>(): Record<ClassWeekday, T[]> {
   return {
     Monday: [],
     Tuesday: [],
@@ -192,7 +192,7 @@ function scheduleGap(klass: IClass): string | null {
 }
 
 export function buildTeacherTimetable(classes: IClass[]): TeacherTimetableModel {
-  const draftsByDay = emptyDays();
+  const draftsByDay = emptyDays<DraftBlock>();
   const unscheduled: UnscheduledClass[] = [];
   const colorByClass = new Map<string, number>();
   let nextColor = 0;
@@ -246,7 +246,7 @@ export function buildTeacherTimetable(classes: IClass[]): TeacherTimetableModel 
     }
   }
 
-  const blocksByDay = emptyDays();
+  const blocksByDay = emptyDays<TimetableBlock>();
   if (!Number.isFinite(rangeStart) || !Number.isFinite(rangeEnd)) {
     return {
       rangeStart: 0,
