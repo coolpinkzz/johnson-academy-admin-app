@@ -1,4 +1,5 @@
 import { formatClassScheduleSummary } from "@/lib/class-validation";
+import { formatClassBranchLabel } from "@/types/class";
 import { formatDisplayDate } from "@/lib/utils";
 import type { CompensationBooking } from "@/types/compensation";
 import {
@@ -52,7 +53,7 @@ export function buildCompensationWhatsAppMessage(
   const dateLabel = dateKey ? formatDisplayDate(dateKey) : booking.date;
 
   const targetBits: string[] = [targetName];
-  if (targetClass?.branch) targetBits.push(`Branch ${targetClass.branch}`);
+  if (targetClass?.branch) targetBits.push(formatClassBranchLabel(targetClass.branch));
   const schedule = targetClass
     ? formatClassScheduleSummary(targetClass)
     : null;

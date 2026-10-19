@@ -9,6 +9,7 @@ import {
 } from "@/lib/teacher-timetable";
 import {
   CLASS_WEEKDAYS,
+  formatClassBranchLabel,
   getClassDocumentId,
   type ClassWeekday,
   type IClass,
@@ -182,7 +183,7 @@ export function TeacherTimetable({
                       onClick={() => openBlock(block)}
                       style={blockStyle(block, model.rangeStart)}
                       title={`${block.name}, ${block.startLabel}–${block.endLabel}${
-                        block.branch ? `, Branch ${block.branch}` : ""
+                        block.branch ? `, ${formatClassBranchLabel(block.branch)}` : ""
                       }`}
                       aria-label={`${block.name}, ${day}, ${block.startLabel} to ${block.endLabel}`}
                       className={`absolute z-10 overflow-hidden rounded-md border px-1.5 py-1 text-left shadow-sm hover:brightness-95 focus-visible:outline focus-visible:outline-2 focus-visible:outline-blue-500 ${timetableColorClass(block.colorIndex)}`}

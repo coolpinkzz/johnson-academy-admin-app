@@ -42,7 +42,7 @@ import {
   todayInIndia,
 } from "@/types/compensation";
 import type { User } from "@/types/user";
-import { CLASS_BRANCHES } from "@/types/class";
+import { CLASS_BRANCHES, formatClassBranchLabel } from "@/types/class";
 import { toast } from "react-toastify";
 
 type Step = 1 | 2 | 3 | 4;
@@ -507,7 +507,7 @@ export function BookCompensationModal({ onSuccess }: Props) {
               <option value="">All branches</option>
               {CLASS_BRANCHES.map((branch) => (
                 <option key={branch} value={branch}>
-                  Branch {branch}
+                  {formatClassBranchLabel(branch)}
                 </option>
               ))}
             </select>
@@ -540,7 +540,7 @@ export function BookCompensationModal({ onSuccess }: Props) {
                 </p>
                 <p className="mt-1 text-xs text-gray-500">
                   No other classes have free guest seats on this date
-                  {branchFilter ? ` in Branch ${branchFilter}` : ""}.
+                  {branchFilter ? ` in ${formatClassBranchLabel(branchFilter)}` : ""}.
                 </p>
               </div>
             ) : (
@@ -572,7 +572,7 @@ export function BookCompensationModal({ onSuccess }: Props) {
                           </p>
                           <p className="mt-0.5 text-xs text-gray-500">
                             {item.class.branch
-                              ? `Branch ${item.class.branch}`
+                              ? formatClassBranchLabel(item.class.branch)
                               : "No branch"}
                             {schedule ? ` · ${schedule}` : ""}
                           </p>

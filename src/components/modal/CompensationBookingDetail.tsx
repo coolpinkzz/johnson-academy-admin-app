@@ -4,6 +4,7 @@ import React from "react";
 import { ArrowRight } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { formatClassScheduleSummary } from "@/lib/class-validation";
+import { formatClassBranchLabel } from "@/types/class";
 import { formatDisplayDate } from "@/lib/utils";
 import {
   getCompensationWhatsAppPhone,
@@ -130,7 +131,7 @@ export function CompensationBookingDetail({
       value: (
         <span>
           {homeClass?.name || getCompensationRefName(booking.homeClassId)}
-          {homeClass?.branch ? ` · Branch ${homeClass.branch}` : ""}
+          {homeClass?.branch ? ` · ${formatClassBranchLabel(homeClass.branch)}` : ""}
           {homeSchedule ? (
             <span className="block text-xs text-gray-500">{homeSchedule}</span>
           ) : null}
@@ -142,7 +143,7 @@ export function CompensationBookingDetail({
       value: (
         <span>
           {targetClass?.name || getCompensationRefName(booking.targetClassId)}
-          {targetClass?.branch ? ` · Branch ${targetClass.branch}` : ""}
+          {targetClass?.branch ? ` · ${formatClassBranchLabel(targetClass.branch)}` : ""}
           {targetSchedule ? (
             <span className="block text-xs text-gray-500">{targetSchedule}</span>
           ) : null}

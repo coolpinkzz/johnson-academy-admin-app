@@ -12,6 +12,7 @@
  * | Classes         | ✓     |      | ✓      |
  * | Attendance      | ✓     | ✓    | ✓      |
  * | Monthly Reports | ✓     | ✓    | ✓      |
+ * | MRT Dashboard   | ✓     | ✓    | ✓      |
  * | Compensation    | ✓     |      | ✓      |
  * | Notice Board    |       |      | ✓      |
  * | Manage Team     |       |      | ✓      |
@@ -31,6 +32,7 @@ export type DashboardModule =
   | "classes"
   | "attendance"
   | "monthly-reports"
+  | "mrt-reporting"
   | "compensation"
   | "notice-board"
   | "manage-team";
@@ -45,6 +47,7 @@ export const MODULE_ROUTES: Record<DashboardModule, string> = {
   classes: "/dashboard/classes",
   attendance: "/dashboard/attendance",
   "monthly-reports": "/dashboard/monthly-reports",
+  "mrt-reporting": "/dashboard/mrt-reporting",
   compensation: "/dashboard/compensation",
   "notice-board": "/dashboard/notice-board",
   "manage-team": "/dashboard/manage-team",
@@ -58,6 +61,7 @@ export const ROLE_MODULES: Record<StaffRole, readonly DashboardModule[]> = {
     "classes",
     "attendance",
     "monthly-reports",
+    "mrt-reporting",
     "compensation",
   ],
   aqsd: [
@@ -67,6 +71,7 @@ export const ROLE_MODULES: Record<StaffRole, readonly DashboardModule[]> = {
     "modules",
     "attendance",
     "monthly-reports",
+    "mrt-reporting",
   ],
   master: [
     "dashboard",
@@ -78,6 +83,7 @@ export const ROLE_MODULES: Record<StaffRole, readonly DashboardModule[]> = {
     "classes",
     "attendance",
     "monthly-reports",
+    "mrt-reporting",
     "compensation",
     "notice-board",
     "manage-team",
@@ -96,6 +102,7 @@ export const NAV_MODULES: readonly DashboardModule[] = [
   "attendance",
   "compensation",
   "monthly-reports",
+  "mrt-reporting",
   "manage-team",
 ];
 

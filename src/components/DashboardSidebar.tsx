@@ -8,9 +8,11 @@ import {
   Home,
   Users,
   Clock,
+  ChevronDown,
   ChevronLeft,
   ChevronRight,
   FileBarChart,
+  BarChart3,
   UserCog,
 } from "lucide-react";
 import Link from "next/link";
@@ -24,12 +26,18 @@ import {
   MODULE_ROUTES,
 } from "@/lib/rbac";
 
+interface SidebarChild {
+  title: string;
+  href: string;
+}
+
 interface SidebarItem {
   title: string;
   module: DashboardModule;
   href: string;
   icon: React.ReactNode;
   badge?: string;
+  children?: SidebarChild[];
 }
 
 const sidebarItems: SidebarItem[] = [
@@ -94,6 +102,16 @@ const sidebarItems: SidebarItem[] = [
     icon: <FileBarChart className="h-4 w-4" />,
   },
   {
+    title: "MRT Dashboard",
+    module: "mrt-reporting",
+    href: MODULE_ROUTES["mrt-reporting"],
+    icon: <BarChart3 className="h-4 w-4" />,
+    children: [
+      { title: "MRT Dashboard", href: MODULE_ROUTES["mrt-reporting"] },
+      { title: "Leaderboard", href: `${MODULE_ROUTES["mrt-reporting"]}/leaderboard` },
+    ],
+  },
+  {
     title: "Manage Team",
     module: "manage-team",
     href: MODULE_ROUTES["manage-team"],
@@ -106,6 +124,7 @@ export default function DashboardSidebar() {
   const pathname = usePathname();
   const [isOpen, setIsOpen] = useState(false); // mobile
   const [collapsed, setCollapsed] = useState(false); // desktop
+  const [openGroups, setOpenGroups] = useState<Record<string, boolean>>({});
 
   const visibleItems = useMemo(() => {
     const allowed = new Set(getNavModulesForRole(user?.role));
@@ -119,32 +138,91 @@ export default function DashboardSidebar() {
     return pathname === href || pathname.startsWith(`${href}/`);
   };
 
-  const renderMenuItems = () => (
+  const isChildActive = (parentHref: string, childHref: string) => {
+    if (childHref === parentHref) {
+      return pathname === childHref;
+    }
+    return pathname === childHref || pathname.startsWith(`${childHref}/`);
+  };
+
+  const renderMenuItems = (compact: boolean) => (
     <nav className="space-y-1">
       {visibleItems.map((item) => {
         const isActive = isItemActive(item.href);
+        const hasChildren = Boolean(item.children?.length);
+        const groupOpen = openGroups[item.module] ?? isActive;
+        const itemClass = `flex w-full items-center justify-between rounded-lg px-3 py-2 text-sm font-medium transition-colors ${
+          isActive
+            ? "bg-blue-100 text-blue-600"
+            : "text-gray-600 hover:bg-gray-100 hover:text-gray-900"
+        }`;
+
+        if (hasChildren && !compact) {
+          return (
+            <div key={item.href}>
+              <button
+                type="button"
+                aria-expanded={groupOpen}
+                className={itemClass}
+                onClick={() =>
+                  setOpenGroups((current) => ({
+                    ...current,
+                    [item.module]: !groupOpen,
+                  }))
+                }
+              >
+                <div className="flex items-center gap-3">
+                  {item.icon}
+                  {item.title}
+                </div>
+                <ChevronDown
+                  className={`h-4 w-4 transition-transform ${groupOpen ? "rotate-180" : ""}`}
+                />
+              </button>
+              {groupOpen ? (
+                <div className="ml-5 mt-1 space-y-1 border-l border-gray-200 pl-2">
+                  {item.children?.map((child) => {
+                    const childActive = isChildActive(item.href, child.href);
+                    return (
+                      <Link
+                        key={child.href}
+                        href={child.href}
+                        aria-current={childActive ? "page" : undefined}
+                        className={`block rounded-lg px-3 py-2 text-sm font-medium transition-colors ${
+                          childActive
+                            ? "bg-blue-100 text-blue-600"
+                            : "text-gray-600 hover:bg-gray-100 hover:text-gray-900"
+                        }`}
+                        onClick={() => setIsOpen(false)}
+                      >
+                        {child.title}
+                      </Link>
+                    );
+                  })}
+                </div>
+              ) : null}
+            </div>
+          );
+        }
+
         return (
           <Link
             key={item.href}
             href={item.href}
-            className={`flex items-center justify-between rounded-lg px-3 py-2 text-sm font-medium transition-colors
-              ${
-                isActive
-                  ? "bg-blue-100 text-blue-600"
-                  : "text-gray-600 hover:bg-gray-100 hover:text-gray-900"
-              }`}
+            aria-current={isActive ? "page" : undefined}
+            className={itemClass}
             onClick={() => setIsOpen(false)}
           >
             <div className="flex items-center gap-3">
               {item.icon}
-              {!collapsed && item.title}
+              {!compact && item.title}
             </div>
-            {!collapsed && item.badge && (
+            {!compact && item.badge && (
               <span className="ml-auto rounded-full bg-blue-600 px-2 py-0.5 text-xs text-white">
                 {item.badge}
               </span>
             )}
-            {collapsed && item.badge && (
+            {compact && item.badge && (
               <span className="ml-auto h-2 w-2 rounded-full bg-blue-600"></span>
             )}
           </Link>
@@ -205,7 +283,7 @@ export default function DashboardSidebar() {
           />
         </div>
         <div className="flex-1 overflow-auto px-2 py-4">
-          {renderMenuItems()}
+          {renderMenuItems(false)}
         </div>
         {renderUserSection()}
       </div>
@@ -241,7 +319,7 @@ export default function DashboardSidebar() {
           </button>
         </div>
         <div className="flex-1 overflow-auto px-2 py-4">
-          {renderMenuItems()}
+          {renderMenuItems(collapsed)}
         </div>
         {renderUserSection()}
       </div>

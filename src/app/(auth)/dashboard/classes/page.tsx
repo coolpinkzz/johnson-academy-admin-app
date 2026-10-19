@@ -8,6 +8,7 @@ import {
   ClassResponse,
   GetClassesParams,
   CLASS_BRANCHES,
+  formatClassBranchLabel,
   getClassTeacherList,
   classTeacherRefId,
   getClassDocumentId,
@@ -327,7 +328,7 @@ const ClassesPage = () => {
                       <option value="">All</option>
                       {CLASS_BRANCHES.map((b) => (
                         <option key={b} value={b}>
-                          Branch {b}
+                          {formatClassBranchLabel(b)}
                         </option>
                       ))}
                     </select>
@@ -468,7 +469,7 @@ const ClassesPage = () => {
                       </h3>
                       {classItem.branch ? (
                         <p className="text-xs text-gray-500 mb-3">
-                          Branch {classItem.branch}
+                          {formatClassBranchLabel(classItem.branch)}
                           {classItem.academicYear
                             ? ` · ${classItem.academicYear}`
                             : ""}

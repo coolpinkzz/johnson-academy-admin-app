@@ -8,6 +8,7 @@ import {
   CLASS_WEEKDAYS,
   CLASS_BRANCHES,
   ClassWeekday,
+  formatClassBranchLabel,
   getClassDocumentId,
 } from "@/types/class";
 import { getTeachers } from "@/services/teacher";
@@ -396,7 +397,7 @@ export function ClassForm({
               <option value="">—</option>
               {CLASS_BRANCHES.map((b) => (
                 <option key={b} value={b}>
-                  Branch {b}
+                  {formatClassBranchLabel(b)}
                 </option>
               ))}
             </select>

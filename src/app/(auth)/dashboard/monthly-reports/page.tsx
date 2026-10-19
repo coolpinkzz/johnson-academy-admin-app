@@ -24,6 +24,7 @@ import {
   Check,
   BookOpen,
 } from "lucide-react";
+import Link from "next/link";
 import React, { useState, useMemo } from "react";
 
 function toEnrollmentOptions(
@@ -168,6 +169,12 @@ const MonthlyReportsPage = () => {
               </p>
             </div>
             <div className="flex items-center gap-4">
+              <Link
+                href="/dashboard/mrt-reporting"
+                className="rounded-lg border border-blue-200 bg-blue-50 px-3 py-2 text-sm font-medium text-blue-700 hover:bg-blue-100"
+              >
+                MRT dashboard
+              </Link>
               <button className="relative p-2 text-gray-600 hover:text-gray-900 hover:bg-gray-100 rounded-lg transition-colors">
                 <Bell className="h-5 w-5" />
                 <span className="absolute top-1 right-1 h-2 w-2 bg-red-500 rounded-full"></span>

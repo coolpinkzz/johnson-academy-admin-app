@@ -14,6 +14,8 @@ export type ClassWeekday =
   | "Saturday"
   | "Sunday";
 
+export const CLASS_BRANCH_ONLINE = "online";
+
 export type ClassBranch =
   | "1"
   | "2"
@@ -26,7 +28,12 @@ export type ClassBranch =
   | "9"
   | "10"
   | "11"
-  | "12";
+  | "12"
+  | typeof CLASS_BRANCH_ONLINE;
+
+export function formatClassBranchLabel(branch: string): string {
+  return branch === CLASS_BRANCH_ONLINE ? "Online" : `Branch ${branch}`;
+}
 
 export const CLASS_STATUSES: ClassStatus[] = [
   "active",
@@ -57,6 +64,7 @@ export const CLASS_BRANCHES: ClassBranch[] = [
   "10",
   "11",
   "12",
+  CLASS_BRANCH_ONLINE,
 ];
 
 export const DEFAULT_CLASS_TIMEZONE = "Asia/Kolkata";

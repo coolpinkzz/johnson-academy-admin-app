@@ -10,6 +10,7 @@ import { ConfirmationDialog } from "@/components/modal/ConfirmationDialog";
 import { DatePicker } from "@/components/DatePicker";
 import { useModalContext } from "@/contexts/ModalContext";
 import { formatClassScheduleSummary } from "@/lib/class-validation";
+import { CLASS_BRANCH_ONLINE } from "@/types/class";
 import { formatDisplayDate } from "@/lib/utils";
 import {
   getCompensationWhatsAppPhone,
@@ -48,7 +49,9 @@ function studentLabel(booking: CompensationBooking): string {
 
 function classLabel(ref: CompensationBooking["homeClassId"]): string {
   if (typeof ref === "object" && ref) {
-    return ref.branch ? `${ref.name} (B${ref.branch})` : ref.name;
+    const branchLabel =
+      ref.branch === CLASS_BRANCH_ONLINE ? "Online" : `B${ref.branch}`;
+    return ref.branch ? `${ref.name} (${branchLabel})` : ref.name;
   }
   return getCompensationRefName(ref, "—");
 }

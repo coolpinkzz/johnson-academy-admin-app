@@ -51,7 +51,7 @@ export const classFormSchema = z
       .transform((v) => (v && v.length > 0 ? v : undefined))
       .refine(
         (v) => v === undefined || (CLASS_BRANCHES as string[]).includes(v),
-        { message: "Branch must be 1–12" },
+        { message: "Branch must be 1–12 or online" },
       ),
     academicYear: optionalTrimmedString,
     notes: optionalTrimmedString,

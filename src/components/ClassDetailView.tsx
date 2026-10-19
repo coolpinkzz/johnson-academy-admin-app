@@ -3,6 +3,7 @@
 import React from "react";
 import {
   IClass,
+  formatClassBranchLabel,
   getClassEnrolledCount,
   getClassTeacherList,
   type ClassTeacherRef,
@@ -32,7 +33,7 @@ export function ClassDetailView({
   const rows: { label: string; value: React.ReactNode }[] = [
     {
       label: "Branch",
-      value: classItem.branch ? `Branch ${classItem.branch}` : "—",
+      value: classItem.branch ? formatClassBranchLabel(classItem.branch) : "—",
     },
     { label: "Academic year", value: classItem.academicYear || "—" },
     { label: "Teachers", value: teachers || "—" },
