@@ -3,10 +3,17 @@
 import ProtectedRoute from "@/components/ProtectedRoute";
 import { useAuth } from "@/services/auth";
 import { getClasses } from "@/services/class";
+import { getTeachers } from "@/services/teacher";
 import { generateMonthlyReport, downloadReport } from "@/services/reports";
 import {
+  CLASS_BRANCHES,
   ClassResponse,
+  GetClassesParams,
   IClass,
+  classTeacherRefId,
+  formatClassBranchLabel,
+  getClassDocumentId,
+  getClassTeacherList,
   getPopulatedStudentsInClass,
   getStudentInClassCourseId,
   getStudentInClassUserId,
@@ -25,7 +32,7 @@ import {
   BookOpen,
 } from "lucide-react";
 import Link from "next/link";
-import React, { useState, useMemo } from "react";
+import React, { useEffect, useMemo, useState } from "react";
 
 function toEnrollmentOptions(
   studentsInClass: IClass["studentsInClass"] | undefined,
@@ -52,18 +59,34 @@ const MonthlyReportsPage = () => {
   const [selectedMonth, setSelectedMonth] = useState<string>("");
   const [isGenerating, setIsGenerating] = useState(false);
   const [reportUrl, setReportUrl] = useState<string | null>(null);
+  const [selectedBranch, setSelectedBranch] = useState("");
+  const [selectedTeacherId, setSelectedTeacherId] = useState("");
+  const [showBranchDropdown, setShowBranchDropdown] = useState(false);
+  const [showTeacherDropdown, setShowTeacherDropdown] = useState(false);
   const [showClassDropdown, setShowClassDropdown] = useState(false);
   const [showStudentDropdown, setShowStudentDropdown] = useState(false);
   const [showMonthDropdown, setShowMonthDropdown] = useState(false);
   const [classSearch, setClassSearch] = useState("");
+  const [teacherSearch, setTeacherSearch] = useState("");
+
+  const classQueryParams = useMemo<GetClassesParams>(() => {
+    const params: GetClassesParams = {};
+    if (selectedBranch) params.branch = selectedBranch;
+    return params;
+  }, [selectedBranch]);
 
   const {
     data: classesData,
     isLoading: classesLoading,
     error: classesError,
   } = useQuery<ClassResponse>({
-    queryKey: ["classes"],
-    queryFn: () => getClasses(),
+    queryKey: ["classes", "monthly-reports", classQueryParams],
+    queryFn: () => getClasses(classQueryParams),
+  });
+
+  const { data: teachersData } = useQuery({
+    queryKey: ["teachers"],
+    queryFn: () => getTeachers(),
   });
 
   const enrollments = useMemo(
@@ -87,9 +110,59 @@ const MonthlyReportsPage = () => {
     return monthsList;
   }, []);
 
+  const teacherNameById = useMemo(() => {
+    const names = new Map<string, string>();
+    for (const teacher of teachersData?.results ?? []) {
+      const id = teacher._id || teacher.id;
+      if (id) names.set(id, teacher.name);
+    }
+    return names;
+  }, [teachersData?.results]);
+
+  const getTeacherName = (teacherId: string, fallback?: string) => {
+    return teacherNameById.get(teacherId) || fallback || "Teacher";
+  };
+
+  const teachersInScope = useMemo(() => {
+    const teachers = new Map<string, string>();
+
+    for (const classItem of classesData?.results ?? []) {
+      for (const ref of getClassTeacherList(classItem)) {
+        const id = classTeacherRefId(ref);
+        if (!id || teachers.has(id)) continue;
+        const populatedName =
+          typeof ref === "object" && ref != null ? ref.name : undefined;
+        teachers.set(
+          id,
+          teacherNameById.get(id) || populatedName || "Teacher",
+        );
+      }
+    }
+
+    return Array.from(teachers.entries())
+      .map(([id, name]) => ({ id, name }))
+      .sort((a, b) => a.name.localeCompare(b.name));
+  }, [classesData?.results, teacherNameById]);
+
+  const filteredTeachers = useMemo(() => {
+    const query = teacherSearch.trim().toLowerCase();
+    if (!query) return teachersInScope;
+    return teachersInScope.filter((teacher) =>
+      teacher.name.toLowerCase().includes(query),
+    );
+  }, [teachersInScope, teacherSearch]);
+
   const filteredClasses = useMemo(() => {
     const normalizedQuery = classSearch.trim().toLowerCase();
-    const classes = classesData?.results ?? [];
+    let classes = classesData?.results ?? [];
+
+    if (selectedTeacherId) {
+      classes = classes.filter((classItem) =>
+        getClassTeacherList(classItem).some(
+          (ref) => classTeacherRefId(ref) === selectedTeacherId,
+        ),
+      );
+    }
 
     if (!normalizedQuery) {
       return classes;
@@ -98,7 +171,54 @@ const MonthlyReportsPage = () => {
     return classes.filter((classItem) =>
       classItem.name.toLowerCase().includes(normalizedQuery),
     );
-  }, [classSearch, classesData?.results]);
+  }, [classSearch, classesData?.results, selectedTeacherId]);
+
+  useEffect(() => {
+    if (!selectedTeacherId) return;
+    const teacherStillAvailable = teachersInScope.some(
+      (teacher) => teacher.id === selectedTeacherId,
+    );
+    if (!teacherStillAvailable) {
+      setSelectedTeacherId("");
+    }
+  }, [selectedTeacherId, teachersInScope]);
+
+  useEffect(() => {
+    if (!selectedClass) return;
+    const selectedId = getClassDocumentId(selectedClass);
+    const classStillVisible = filteredClasses.some(
+      (classItem) => getClassDocumentId(classItem) === selectedId,
+    );
+    if (!classStillVisible) {
+      setSelectedClass(null);
+      setSelectedEnrollment(null);
+      setReportUrl(null);
+    }
+  }, [filteredClasses, selectedClass]);
+
+  const resetDependentSelection = () => {
+    setSelectedClass(null);
+    setSelectedEnrollment(null);
+    setReportUrl(null);
+    setShowClassDropdown(false);
+    setClassSearch("");
+  };
+
+  const handleBranchSelect = (branch: string) => {
+    setSelectedBranch(branch);
+    setSelectedTeacherId("");
+    setTeacherSearch("");
+    setShowBranchDropdown(false);
+    setShowTeacherDropdown(false);
+    resetDependentSelection();
+  };
+
+  const handleTeacherSelect = (teacherId: string) => {
+    setSelectedTeacherId(teacherId);
+    setShowTeacherDropdown(false);
+    setTeacherSearch("");
+    resetDependentSelection();
+  };
 
   const handleClassSelect = (classItem: IClass) => {
     setSelectedClass(classItem);
@@ -191,14 +311,166 @@ const MonthlyReportsPage = () => {
               </h2>
 
               <div className="space-y-6">
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-2">
+                      Branch
+                    </label>
+                    <div className="relative">
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setShowBranchDropdown((open) => !open);
+                          setShowTeacherDropdown(false);
+                          setShowClassDropdown(false);
+                        }}
+                        className="w-full flex items-center justify-between px-3 py-2 border border-gray-300 rounded-lg bg-white text-left focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                      >
+                        <span
+                          className={
+                            selectedBranch ? "text-gray-900" : "text-gray-500"
+                          }
+                        >
+                          {selectedBranch
+                            ? formatClassBranchLabel(selectedBranch)
+                            : "All branches"}
+                        </span>
+                        <ChevronDown className="h-4 w-4 text-gray-400" />
+                      </button>
+
+                      {showBranchDropdown && (
+                        <div className="absolute z-20 w-full mt-1 bg-white border border-gray-300 rounded-lg shadow-lg max-h-60 overflow-auto">
+                          <button
+                            type="button"
+                            onClick={() => handleBranchSelect("")}
+                            className="w-full flex items-center justify-between px-3 py-2 text-left hover:bg-gray-100"
+                          >
+                            <span className="text-gray-900">All branches</span>
+                            {!selectedBranch && (
+                              <Check className="h-4 w-4 text-blue-600" />
+                            )}
+                          </button>
+                          {CLASS_BRANCHES.map((branch) => (
+                            <button
+                              key={branch}
+                              type="button"
+                              onClick={() => handleBranchSelect(branch)}
+                              className="w-full flex items-center justify-between px-3 py-2 text-left hover:bg-gray-100"
+                            >
+                              <span className="text-gray-900">
+                                {formatClassBranchLabel(branch)}
+                              </span>
+                              {selectedBranch === branch && (
+                                <Check className="h-4 w-4 text-blue-600" />
+                              )}
+                            </button>
+                          ))}
+                        </div>
+                      )}
+                    </div>
+                  </div>
+
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-2">
+                      Teacher
+                    </label>
+                    <div className="relative">
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setShowTeacherDropdown((open) => !open);
+                          setShowBranchDropdown(false);
+                          setShowClassDropdown(false);
+                        }}
+                        className="w-full flex items-center justify-between px-3 py-2 border border-gray-300 rounded-lg bg-white text-left focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                      >
+                        <span
+                          className={
+                            selectedTeacherId
+                              ? "text-gray-900"
+                              : "text-gray-500"
+                          }
+                        >
+                          {selectedTeacherId
+                            ? teachersInScope.find(
+                                (teacher) => teacher.id === selectedTeacherId,
+                              )?.name || getTeacherName(selectedTeacherId)
+                            : "All teachers"}
+                        </span>
+                        <ChevronDown className="h-4 w-4 text-gray-400" />
+                      </button>
+
+                      {showTeacherDropdown && (
+                        <div className="absolute z-20 w-full mt-1 bg-white border border-gray-300 rounded-lg shadow-lg max-h-60 overflow-auto">
+                          <div className="sticky top-0 bg-white border-b border-gray-200 p-2">
+                            <div className="relative">
+                              <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-gray-400 pointer-events-none" />
+                              <input
+                                type="search"
+                                value={teacherSearch}
+                                onChange={(e) =>
+                                  setTeacherSearch(e.target.value)
+                                }
+                                placeholder="Search teachers..."
+                                className="w-full rounded-md border border-gray-300 py-2 pl-9 pr-3 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+                                autoComplete="off"
+                              />
+                            </div>
+                          </div>
+                          <button
+                            type="button"
+                            onClick={() => handleTeacherSelect("")}
+                            className="w-full flex items-center justify-between px-3 py-2 text-left hover:bg-gray-100"
+                          >
+                            <span className="text-gray-900">All teachers</span>
+                            {!selectedTeacherId && (
+                              <Check className="h-4 w-4 text-blue-600" />
+                            )}
+                          </button>
+                          {filteredTeachers.length === 0 ? (
+                            <div className="p-3 text-center text-gray-500">
+                              {teacherSearch.trim()
+                                ? `No teachers match "${teacherSearch.trim()}"`
+                                : "No teachers for this filter"}
+                            </div>
+                          ) : (
+                            filteredTeachers.map((teacher) => (
+                              <button
+                                key={teacher.id}
+                                type="button"
+                                onClick={() => handleTeacherSelect(teacher.id)}
+                                className="w-full flex items-center justify-between px-3 py-2 text-left hover:bg-gray-100"
+                              >
+                                <span className="text-gray-900">
+                                  {teacher.name}
+                                </span>
+                                {selectedTeacherId === teacher.id && (
+                                  <Check className="h-4 w-4 text-blue-600" />
+                                )}
+                              </button>
+                            ))
+                          )}
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                </div>
+
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-2">
                     Select Class
+                    <span className="ml-2 font-normal text-gray-500">
+                      ({filteredClasses.length} shown)
+                    </span>
                   </label>
                   <div className="relative">
                     <button
                       type="button"
-                      onClick={() => setShowClassDropdown(!showClassDropdown)}
+                      onClick={() => {
+                        setShowClassDropdown((open) => !open);
+                        setShowBranchDropdown(false);
+                        setShowTeacherDropdown(false);
+                      }}
                       className="w-full flex items-center justify-between px-3 py-2 border border-gray-300 rounded-lg bg-white text-left focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
                     >
                       <span
@@ -236,13 +508,15 @@ const MonthlyReportsPage = () => {
                           <div className="p-3 text-center text-red-500">
                             Error loading classes
                           </div>
-                        ) : classesData?.results?.length === 0 ? (
+                        ) : (classesData?.results?.length ?? 0) === 0 ? (
                           <div className="p-3 text-center text-gray-500">
                             No classes found
                           </div>
                         ) : filteredClasses.length === 0 ? (
                           <div className="p-3 text-center text-gray-500">
-                            No classes match "{classSearch.trim()}"
+                            {classSearch.trim()
+                              ? `No classes match "${classSearch.trim()}"`
+                              : "No classes match the selected filters"}
                           </div>
                         ) : (
                           filteredClasses.map((classItem) => (

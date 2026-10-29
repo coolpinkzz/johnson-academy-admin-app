@@ -60,6 +60,23 @@ function resolveStudentId(student: User): string {
   return student.id || student._id;
 }
 
+/** JA02/GTR/Beginner → GTR (token after the JA + digits prefix). */
+function getClassInstrumentCode(name: string): string | null {
+  const trimmed = name.trim();
+  if (!trimmed) return null;
+
+  const slashParts = trimmed
+    .split("/")
+    .map((part) => part.trim())
+    .filter(Boolean);
+  if (slashParts.length >= 2 && /^JA\d+/i.test(slashParts[0])) {
+    return slashParts[1].toUpperCase();
+  }
+
+  const match = trimmed.match(/^JA\d+[/\s._-]+([A-Za-z0-9]+)/i);
+  return match?.[1] ? match[1].toUpperCase() : null;
+}
+
 export function BookCompensationModal({ onSuccess }: Props) {
   const { closeModal } = useModal();
   const createMutation = useCreateCompensationBooking();
@@ -72,6 +89,7 @@ export function BookCompensationModal({ onSuccess }: Props) {
   const [date, setDate] = useState(todayInIndia());
   const [homeClassId, setHomeClassId] = useState("");
   const [branchFilter, setBranchFilter] = useState("");
+  const [targetClassSearch, setTargetClassSearch] = useState("");
   const [selectedTarget, setSelectedTarget] =
     useState<AvailableCompensationClass | null>(null);
   const [notes, setNotes] = useState("");
@@ -167,8 +185,39 @@ export function BookCompensationModal({ onSuccess }: Props) {
   }, []);
 
   const selectedHomeClass = homeClassOptions.find((c) => c.id === homeClassId);
+  const homeInstrumentCode = selectedHomeClass
+    ? getClassInstrumentCode(selectedHomeClass.name)
+    : null;
   const targetClass = selectedTarget?.class;
   const targetAvailability = selectedTarget?.availability;
+
+  const displayedAvailableClasses = useMemo(() => {
+    const classes = availableClasses ?? [];
+    const query = targetClassSearch.trim().toLowerCase();
+
+    if (query) {
+      return classes.filter((item) => {
+        const name = item.class.name.toLowerCase();
+        const branch = (item.class.branch ?? "").toLowerCase();
+        const schedule = (
+          formatClassScheduleSummary(item.class) ?? ""
+        ).toLowerCase();
+        return (
+          name.includes(query) ||
+          branch.includes(query) ||
+          schedule.includes(query)
+        );
+      });
+    }
+
+    if (!homeInstrumentCode) {
+      return classes;
+    }
+
+    return classes.filter(
+      (item) => getClassInstrumentCode(item.class.name) === homeInstrumentCode,
+    );
+  }, [availableClasses, homeInstrumentCode, targetClassSearch]);
 
   const canGoStep2 =
     Boolean(studentId) &&
@@ -204,6 +253,7 @@ export function BookCompensationModal({ onSuccess }: Props) {
     }
     setFormError(null);
     setSelectedTarget(null);
+    setTargetClassSearch("");
     setStep(2);
   };
 
@@ -501,6 +551,7 @@ export function BookCompensationModal({ onSuccess }: Props) {
               onChange={(e) => {
                 setBranchFilter(e.target.value);
                 setSelectedTarget(null);
+                setTargetClassSearch("");
               }}
               className="w-full rounded-md border border-gray-300 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
             >
@@ -523,6 +574,31 @@ export function BookCompensationModal({ onSuccess }: Props) {
               )}
             </div>
 
+            {availableClasses && availableClasses.length > 0 && (
+              <div className="relative">
+                <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-gray-400" />
+                <input
+                  type="search"
+                  value={targetClassSearch}
+                  onChange={(e) => setTargetClassSearch(e.target.value)}
+                  placeholder="Search all available classes..."
+                  className="w-full rounded-md border border-gray-300 py-2 pl-9 pr-3 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  autoComplete="off"
+                />
+              </div>
+            )}
+
+            {!targetClassSearch.trim() && homeInstrumentCode ? (
+              <p className="text-xs text-gray-500">
+                Showing {homeInstrumentCode} classes to match{" "}
+                {selectedHomeClass?.name}. Search to find other instruments.
+              </p>
+            ) : targetClassSearch.trim() ? (
+              <p className="text-xs text-gray-500">
+                Searching all {availableClasses?.length ?? 0} available classes
+              </p>
+            ) : null}
+
             {availableError ? (
               <div className="rounded-lg border border-red-200 bg-red-50 px-3 py-4 text-center text-sm text-red-700">
                 Failed to load available classes. Try again.
@@ -543,9 +619,25 @@ export function BookCompensationModal({ onSuccess }: Props) {
                   {branchFilter ? ` in ${formatClassBranchLabel(branchFilter)}` : ""}.
                 </p>
               </div>
+            ) : displayedAvailableClasses.length === 0 ? (
+              <div className="rounded-lg border border-dashed border-gray-200 px-3 py-8 text-center">
+                <Users className="mx-auto mb-2 h-8 w-8 text-gray-300" />
+                <p className="text-sm font-medium text-gray-900">
+                  {targetClassSearch.trim()
+                    ? `No classes match "${targetClassSearch.trim()}"`
+                    : homeInstrumentCode
+                      ? `No ${homeInstrumentCode} classes with seats`
+                      : "No matching classes"}
+                </p>
+                <p className="mt-1 text-xs text-gray-500">
+                  {targetClassSearch.trim()
+                    ? "Try a different name, or clear search to see matching-instrument classes."
+                    : "Search to look across all available classes."}
+                </p>
+              </div>
             ) : (
               <div className="max-h-72 space-y-2 overflow-y-auto pr-0.5">
-                {availableClasses.map((item) => {
+                {displayedAvailableClasses.map((item) => {
                   const classId = getCompensationRefId(item.class);
                   const isSelected =
                     getCompensationRefId(selectedTarget?.class) === classId;
