@@ -297,11 +297,11 @@ const StudentDetailPage = () => {
             </div>
 
             {canManageStudentFees(user?.role) ? (
-      <StudentFeesSection
+  <StudentFeesSection
     studentId={studentId}
     enrolledCourses={Array.isArray(student.courses) ? student.courses : []}
-        />
-      ) : null}
+  />
+) : null}
 
             {/* Academic Information */}
             <div className="bg-white rounded-lg shadow-sm border">
