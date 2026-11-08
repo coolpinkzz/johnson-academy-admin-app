@@ -2,7 +2,7 @@
 
 import { Search } from "lucide-react";
 import type { MrtRecordSortField, MrtRecordStatus, MrtReportingRecord } from "@/types/mrtReporting";
-import { formatScore, formatSubmittedAt } from "./format";
+import { formatScore, formatSubmittedAt, isMrtAbsent, mrtStatusLabel } from "./format";
 
 interface MrtRecordsTableProps {
   records: MrtReportingRecord[];
@@ -52,11 +52,11 @@ function cellValue(record: MrtReportingRecord, field: MrtRecordSortField): strin
     case "month":
       return record.monthLabel;
     case "status":
-      return record.status === "submitted" ? "Submitted" : "Pending";
+      return mrtStatusLabel(record.status, record.isAbsent);
     case "totalScore":
-      return formatScore(record.totalScore, 30);
+      return isMrtAbsent(record) ? "Absent / —" : formatScore(record.totalScore, 30);
     case "averageScore":
-      return formatScore(record.averageScore, 5);
+      return isMrtAbsent(record) ? "—" : formatScore(record.averageScore, 5);
     case "submittedAt":
       return formatSubmittedAt(record.submittedAt);
     default: {
@@ -89,7 +89,8 @@ export function MrtRecordsTable({
         <div>
           <h2 className="text-base font-semibold text-gray-900">Detailed reports</h2>
           <p className="text-sm text-gray-500">
-            One row is one student, class, course, and month. Pending means no MRT record exists.
+            One row is one student, class, course, and month. Missing means no MRT
+            exists. Absent means the teacher marked the student unavailable.
           </p>
         </div>
         <div className="flex flex-col gap-3 sm:flex-row">
@@ -112,7 +113,8 @@ export function MrtRecordsTable({
             >
               <option value="">All statuses</option>
               <option value="submitted">Submitted</option>
-              <option value="missing">Pending</option>
+              <option value="absent">Absent</option>
+              <option value="missing">Missing</option>
             </select>
           </label>
         </div>
@@ -176,19 +178,32 @@ export function MrtRecordsTable({
                       {column.id === "status" ? (
                         <span
                           className={`inline-flex rounded-full px-2 py-0.5 text-xs font-medium ${
-                            record.status === "submitted"
-                              ? "bg-emerald-50 text-emerald-700"
-                              : "bg-amber-50 text-amber-800"
+                            isMrtAbsent(record)
+                              ? "bg-slate-100 text-slate-700"
+                              : record.status === "submitted"
+                                ? "bg-emerald-50 text-emerald-700"
+                                : "bg-amber-50 text-amber-800"
                           }`}
                         >
                           {cellValue(record, column.id)}
                         </span>
                       ) : column.id === "totalScore" ? (
                         <div className="text-right">
-                          <div className="font-medium tabular-nums">{formatScore(record.totalScore, 30)}</div>
-                          <div className="text-xs tabular-nums text-gray-500">
-                            {formatScore(record.averageScore, 5)} avg
-                          </div>
+                          {isMrtAbsent(record) ? (
+                            <>
+                              <div className="font-medium text-slate-700">Absent</div>
+                              <div className="text-xs tabular-nums text-gray-500">—</div>
+                            </>
+                          ) : (
+                            <>
+                              <div className="font-medium tabular-nums">
+                                {formatScore(record.totalScore, 30)}
+                              </div>
+                              <div className="text-xs tabular-nums text-gray-500">
+                                {formatScore(record.averageScore, 5)} avg
+                              </div>
+                            </>
+                          )}
                         </div>
                       ) : (
                         cellValue(record, column.id)

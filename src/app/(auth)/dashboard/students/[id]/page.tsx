@@ -28,6 +28,16 @@ import {
 } from "@/components/modal";
 import { useQueryClient } from "@tanstack/react-query";
 import { toast } from "react-toastify";
+import {
+  formatAdmissionDate,
+  formatStudentAge,
+  ageFromDateOfBirth,
+  genderLabel,
+  profileCardStatus,
+  referralDisplay,
+  requiresParentDetails,
+} from "@/lib/admission";
+import { StudentEnrolledClasses } from "@/components/StudentEnrolledClasses";
 
 const StudentDetailPage = () => {
   const { user } = useAuth();
@@ -292,7 +302,77 @@ const StudentDetailPage = () => {
                       </div>
                     </div>
                   )}
+                  {student.whatsappNumber && (
+                    <div className="flex items-center gap-3">
+                      <Phone className="h-4 w-4 text-gray-400" />
+                      <div>
+                        <p className="text-sm font-medium text-gray-900">
+                          WhatsApp
+                        </p>
+                        <p className="text-sm text-gray-600">
+                          {student.whatsappNumber}
+                        </p>
+                      </div>
+                    </div>
+                  )}
+                  <div className="flex items-center gap-3">
+                    <Phone className="h-4 w-4 text-gray-400" />
+                    <div>
+                      <p className="text-sm font-medium text-gray-900">
+                        Emergency contact
+                      </p>
+                      <p className="text-sm text-gray-600">
+                        {student.emergencyContact?.phone?.trim() || "Not added"}
+                      </p>
+                    </div>
+                  </div>
                 </div>
+              </div>
+            </div>
+
+            <div className="bg-white rounded-lg shadow-sm border">
+              <div className="p-6">
+                <h3 className="text-lg font-semibold text-gray-900 mb-4">
+                  Admission details
+                </h3>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <AdmissionDetail
+                    label="Date of birth"
+                    value={formatAdmissionDate(student.dateOfBirth)}
+                  />
+                  <AdmissionDetail
+                    label="Gender"
+                    value={genderLabel(student.gender)}
+                  />
+                  <AdmissionDetail
+                    label="Occupation"
+                    value={student.occupation}
+                  />
+                  <AdmissionDetail
+                    label="Date of joining"
+                    value={formatAdmissionDate(student.dateOfJoining)}
+                  />
+                  <AdmissionDetail
+                    label="How did you hear about us"
+                    value={referralDisplay(
+                      student.referralSource,
+                      student.referralSourceOther,
+                    )}
+                  />
+                  <AdmissionDetail label="Address" value={student.address} />
+                </div>
+              </div>
+            </div>
+
+            <ProfileCardSection student={student} />
+
+            <div className="bg-white rounded-lg shadow-sm border">
+              <div className="p-6">
+                <h3 className="text-lg font-semibold text-gray-900 mb-4 flex items-center gap-2">
+                  <Users className="h-5 w-5" />
+                  Classes
+                </h3>
+                <StudentEnrolledClasses classes={student.enrolledClasses} />
               </div>
             </div>
 
@@ -341,7 +421,8 @@ const StudentDetailPage = () => {
                           <Users className="h-6 w-6 text-blue-600" />
                         </div>
                         <p className="text-2xl font-bold text-gray-900">
-                          {student.classes.length}
+                          {student.enrolledClasses?.length ??
+                            student.classes.length}
                         </p>
                         <p className="text-sm text-gray-600">Classes</p>
                       </div>
@@ -521,5 +602,97 @@ const StudentDetailPage = () => {
     </ProtectedRoute>
   );
 };
+
+function ProfileCardSection({ student }: { student: User }) {
+  const status = profileCardStatus(student);
+  const parentsRequired = requiresParentDetails(student.dateOfBirth);
+  const age = ageFromDateOfBirth(student.dateOfBirth);
+  const ageLabel = formatStudentAge(student.dateOfBirth);
+  const guardians = (student.guardians ?? []).filter(
+    (guardian) => guardian.name?.trim() || guardian.relation?.trim(),
+  );
+  const hasParentData = Boolean(
+    student.motherName?.trim() || student.fatherName?.trim() || guardians.length,
+  );
+  const showParents = parentsRequired || hasParentData;
+
+  return (
+    <div className="bg-white rounded-lg shadow-sm border">
+      <div className="p-6">
+        <div className="mb-4 flex flex-wrap items-center justify-between gap-3">
+          <h3 className="text-lg font-semibold text-gray-900">Profile card</h3>
+          <span
+            className={`inline-flex items-center rounded-full px-2.5 py-1 text-xs font-medium ${
+              status === "Completed"
+                ? "bg-green-100 text-green-800"
+                : "bg-amber-100 text-amber-800"
+            }`}
+          >
+            {status}
+          </span>
+        </div>
+        <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
+          <AdmissionDetail label="Age" value={ageLabel} />
+          <AdmissionDetail
+            label="Profile picture"
+            value={student.profilePicture ? "Added" : ""}
+          />
+          {showParents ? (
+            <>
+              <AdmissionDetail label="Mother's name" value={student.motherName} />
+              <AdmissionDetail label="Father's name" value={student.fatherName} />
+            </>
+          ) : (
+            <div className="md:col-span-2">
+              <p className="text-sm text-gray-600">
+                {age == null
+                  ? "Date of birth is needed before parent details can be collected."
+                  : "Parent and guardian details are not required for students over 15."}
+              </p>
+            </div>
+          )}
+        </div>
+        {showParents ? (
+          <div className="mt-4">
+            <p className="text-sm font-medium text-gray-900">Guardians</p>
+            {guardians.length > 0 ? (
+              <ul className="mt-2 divide-y divide-gray-100 rounded-lg border">
+                {guardians.map((guardian, index) => (
+                  <li
+                    key={`${guardian.name}-${guardian.relation}-${index}`}
+                    className="grid grid-cols-1 gap-1 px-3 py-2 text-sm sm:grid-cols-3"
+                  >
+                    <span className="text-gray-500">Guardian {index + 1}</span>
+                    <span className="text-gray-900">{guardian.name || "Not added"}</span>
+                    <span className="text-gray-600">{guardian.relation || "Not added"}</span>
+                  </li>
+                ))}
+              </ul>
+            ) : (
+              <p className="mt-1 text-sm text-gray-600">No guardians added</p>
+            )}
+          </div>
+        ) : null}
+      </div>
+    </div>
+  );
+}
+
+function AdmissionDetail({
+  label,
+  value,
+}: {
+  label: string;
+  value?: string | null;
+}) {
+  return (
+    <div>
+      <p className="text-sm font-medium text-gray-900">{label}</p>
+      <p className="text-sm text-gray-600 whitespace-pre-line">
+        {value?.trim() ? value : "Not added"}
+      </p>
+    </div>
+  );
+}
 
 export default StudentDetailPage;

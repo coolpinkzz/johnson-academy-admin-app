@@ -11,6 +11,7 @@ const sizeClasses = {
   lg: "max-w-lg",
   xl: "max-w-xl",
   half: "w-full max-w-3xl mx-4",
+  desktop: "w-full max-w-5xl mx-4",
   full: "max-w-full mx-4",
 };
 

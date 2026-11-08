@@ -3,6 +3,7 @@ export interface MrtMetricSnapshot {
   expected: number;
   submitted: number;
   missing: number;
+  absent: number;
   completionPercentage: number | null;
   averageTotalScore: number | null;
   averageScore: number | null;
@@ -12,7 +13,10 @@ export interface MrtReportCounts {
   expected: number;
   submitted: number;
   missing: number;
+  absent: number;
   completionPercentage: number | null;
+  averageTotalScore?: number | null;
+  averageScore?: number | null;
 }
 
 export interface MrtBranchRow extends MrtMetricSnapshot {
@@ -73,7 +77,7 @@ export interface MrtReportingDashboard {
   instruments: MrtInstrumentRow[];
 }
 
-export type MrtRecordStatus = "submitted" | "missing";
+export type MrtRecordStatus = "submitted" | "absent" | "missing";
 
 export type MrtRecordSortField =
   | "studentName"
@@ -104,6 +108,7 @@ export interface MrtReportingRecord {
   month: string;
   monthLabel: string;
   status: MrtRecordStatus;
+  isAbsent?: boolean;
   submittedAt: string | null;
   mrtId: string | null;
   totalScore: number | null;

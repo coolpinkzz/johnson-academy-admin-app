@@ -17,7 +17,10 @@ import {
   type StudentBranch,
 } from "@/services/student";
 import { StudentForm } from "@/components/modal";
+import { AddStudentStepper } from "@/components/modal/AddStudentStepper";
+import { canManageStudentFees } from "@/lib/rbac";
 import { StudentBranchCountCards } from "@/components/StudentBranchCountCards";
+import { StudentEnrolledClasses } from "@/components/StudentEnrolledClasses";
 import { useAuth } from "@/services/auth";
 import Image from "next/image";
 import avatarImage from "@/assets/avatar.png";
@@ -185,12 +188,18 @@ const StudentsPage = () => {
             </div>
             <div className="flex items-center gap-4">
               <button
-                onClick={() =>
+                onClick={() => {
+                  const enrollInOneFlow = canManageStudentFees(currentUser?.role);
                   openModal({
-                    title: "Add Student",
-                    content: <StudentForm type="student" />,
-                  })
-                }
+                    title: enrollInOneFlow ? "New student" : "Add Student",
+                    content: enrollInOneFlow ? (
+                      <AddStudentStepper />
+                    ) : (
+                      <StudentForm type="student" />
+                    ),
+                    size: enrollInOneFlow ? "desktop" : "lg",
+                  });
+                }}
                 className="bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 transition-colors flex items-center gap-2"
               >
                 <Plus className="h-4 w-4" />
@@ -384,14 +393,11 @@ const StudentsPage = () => {
                         <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
                           {student.rollNumber || "Not assigned"}
                         </td>
-                        <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-                          {Array.isArray(student.classes)
-                            ? student.classes.length > 0
-                              ? `${student.classes.length} class${
-                                  student.classes.length !== 1 ? "es" : ""
-                                }`
-                              : "No classes"
-                            : student.classes || "No classes"}
+                        <td className="px-6 py-4 text-sm text-gray-900">
+                          <StudentEnrolledClasses
+                            classes={student.enrolledClasses}
+                            variant="compact"
+                          />
                         </td>
 
                         <td className="px-6 py-4 whitespace-nowrap text-sm font-medium">

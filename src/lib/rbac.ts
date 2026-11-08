@@ -14,6 +14,7 @@
  * | Monthly Reports | ✓     | ✓    | ✓      |
  * | MRT Dashboard   | ✓     | ✓    | ✓      |
  * | Compensation    | ✓     |      | ✓      |
+ * | Concerns        | ✓     | ✓    | ✓      |
  * | Notice Board    |       |      | ✓      |
  * | Manage Team     |       |      | ✓      |
  */
@@ -34,6 +35,7 @@ export type DashboardModule =
   | "monthly-reports"
   | "mrt-reporting"
   | "compensation"
+  | "tickets"
   | "notice-board"
   | "manage-team";
 
@@ -49,6 +51,7 @@ export const MODULE_ROUTES: Record<DashboardModule, string> = {
   "monthly-reports": "/dashboard/monthly-reports",
   "mrt-reporting": "/dashboard/mrt-reporting",
   compensation: "/dashboard/compensation",
+  tickets: "/dashboard/tickets",
   "notice-board": "/dashboard/notice-board",
   "manage-team": "/dashboard/manage-team",
 };
@@ -63,6 +66,7 @@ export const ROLE_MODULES: Record<StaffRole, readonly DashboardModule[]> = {
     "monthly-reports",
     "mrt-reporting",
     "compensation",
+    "tickets",
   ],
   aqsd: [
     "students",
@@ -72,6 +76,7 @@ export const ROLE_MODULES: Record<StaffRole, readonly DashboardModule[]> = {
     "attendance",
     "monthly-reports",
     "mrt-reporting",
+    "tickets",
   ],
   master: [
     "dashboard",
@@ -85,6 +90,7 @@ export const ROLE_MODULES: Record<StaffRole, readonly DashboardModule[]> = {
     "monthly-reports",
     "mrt-reporting",
     "compensation",
+    "tickets",
     "notice-board",
     "manage-team",
   ],
@@ -103,6 +109,7 @@ export const NAV_MODULES: readonly DashboardModule[] = [
   "compensation",
   "monthly-reports",
   "mrt-reporting",
+  "tickets",
   "manage-team",
 ];
 

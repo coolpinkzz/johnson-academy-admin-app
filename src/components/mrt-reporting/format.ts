@@ -16,6 +16,19 @@ export function formatScore(value: number | null | undefined, outOf: number): st
   return `${shown} / ${outOf}`;
 }
 
+export function isMrtAbsent(record: {
+  status?: string;
+  isAbsent?: boolean;
+}): boolean {
+  return record.status === "absent" || record.isAbsent === true;
+}
+
+export function mrtStatusLabel(status: string, isAbsent?: boolean): string {
+  if (status === "absent" || isAbsent) return "Absent";
+  if (status === "submitted") return "Submitted";
+  return "Missing";
+}
+
 export function formatPercent(value: number | null | undefined): string {
   if (value == null || Number.isNaN(value)) return "—";
   return `${value.toFixed(1)}%`;

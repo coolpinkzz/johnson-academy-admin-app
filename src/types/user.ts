@@ -53,6 +53,36 @@ export interface Progress {
   upcomingModules: number;
 }
 
+export interface EnrolledClassCourse {
+  id: string;
+  name?: string;
+  instrument?: string;
+}
+
+export interface EnrolledClassTeacher {
+  id: string;
+  name: string;
+}
+
+/** Class a student is enrolled in, with the courses they opted for in that class. */
+export interface EnrolledClass {
+  id: string;
+  name: string;
+  branch?: string;
+  academicYear?: string;
+  status?: string;
+  defaultWeekdays?: string[];
+  defaultStartTime?: string;
+  defaultEndTime?: string;
+  teachers?: EnrolledClassTeacher[];
+  courses: EnrolledClassCourse[];
+}
+
+export interface StudentGuardian {
+  name: string;
+  relation: string;
+}
+
 export interface User {
   _id: string;
   id: string;
@@ -64,11 +94,31 @@ export interface User {
   isActive: boolean;
   isCompleteProfile?: boolean;
   classes: Class[];
+  /** Populated on student list and student profile responses. */
+  enrolledClasses?: EnrolledClass[];
   courses: Course[];
   progress: Progress[];
   rollNumber?: string;
   employeeId?: string;
   phoneNumber?: string;
+  whatsappNumber?: string;
+  dateOfBirth?: string;
+  occupation?: string;
+  gender?: string;
+  address?: string;
+  referralSource?: string;
+  referralSourceOther?: string;
+  dateOfJoining?: string;
+  emergencyContact?: {
+    name?: string;
+    relationship?: string;
+    phone?: string;
+    email?: string;
+  };
+  motherName?: string;
+  fatherName?: string;
+  guardians?: StudentGuardian[];
+  isProfileCardComplete?: boolean;
   profilePicture?: string;
   department?: string;
   /** Staff-only: branches whose students this user may access */

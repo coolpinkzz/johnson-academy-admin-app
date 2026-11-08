@@ -14,6 +14,7 @@ import {
   FileBarChart,
   BarChart3,
   UserCog,
+  LifeBuoy,
 } from "lucide-react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
@@ -110,6 +111,12 @@ const sidebarItems: SidebarItem[] = [
       { title: "MRT Dashboard", href: MODULE_ROUTES["mrt-reporting"] },
       { title: "Leaderboard", href: `${MODULE_ROUTES["mrt-reporting"]}/leaderboard` },
     ],
+  },
+  {
+    title: "Concerns",
+    module: "tickets",
+    href: MODULE_ROUTES.tickets,
+    icon: <LifeBuoy className="h-4 w-4" />,
   },
   {
     title: "Manage Team",

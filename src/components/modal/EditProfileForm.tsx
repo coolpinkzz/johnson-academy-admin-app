@@ -13,6 +13,17 @@ import {
   ROLL_NUMBER_ERROR_MESSAGE,
   ROLL_NUMBER_PLACEHOLDER,
 } from "@/lib/roll-number";
+import {
+  GENDERS,
+  Gender,
+  PHONE_PATTERN,
+  REFERRAL_SOURCES,
+  ReferralSource,
+  todayDateInputValue,
+  toDateInputValue,
+  ageFromDateOfBirth,
+  requiresParentDetails,
+} from "@/lib/admission";
 
 export interface EditProfileFormData {
   name: string;
@@ -21,7 +32,23 @@ export interface EditProfileFormData {
   profilePicture: string;
   phoneNumber: string;
   rollNumber: string;
+  dateOfBirth: string;
+  occupation: string;
+  whatsappNumber: string;
+  gender: Gender | "";
+  address: string;
+  referralSource: ReferralSource | "";
+  referralSourceOther: string;
+  dateOfJoining: string;
+  motherName: string;
+  fatherName: string;
+  guardians: { name: string; relation: string }[];
 }
+
+const selectClass = (hasError: boolean) =>
+  `border-input flex h-9 w-full rounded-md border bg-white px-3 text-sm shadow-xs outline-none focus-visible:border-ring focus-visible:ring-ring/50 focus-visible:ring-[3px] ${
+    hasError ? "border-red-500" : ""
+  }`;
 
 interface EditProfileFormProps {
   student: User;
@@ -30,7 +57,6 @@ interface EditProfileFormProps {
   cancelLabel?: string;
 }
 
-const PHONE_PATTERN = /^\+?[\d\s-()]+$/;
 const EMAIL_PATTERN = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 // min 8 chars, at least one number and one letter
 const PASSWORD_PATTERN = /^(?=.*[A-Za-z])(?=.*\d)[A-Za-z\d@$!%*#?&]{8,}$/;
@@ -51,6 +77,20 @@ export function EditProfileForm({
     profilePicture: student.profilePicture || "",
     phoneNumber: student.phoneNumber || "",
     rollNumber: student.rollNumber || "",
+    dateOfBirth: toDateInputValue(student.dateOfBirth),
+    occupation: student.occupation || "",
+    whatsappNumber: student.whatsappNumber || "",
+    gender: (student.gender as Gender | undefined) || "",
+    address: student.address || "",
+    referralSource: (student.referralSource as ReferralSource | undefined) || "",
+    referralSourceOther: student.referralSourceOther || "",
+    dateOfJoining: toDateInputValue(student.dateOfJoining),
+    motherName: student.motherName || "",
+    fatherName: student.fatherName || "",
+    guardians: (student.guardians ?? []).slice(0, 3).map((guardian) => ({
+      name: guardian.name || "",
+      relation: guardian.relation || "",
+    })),
   });
 
   const [profilePreview, setProfilePreview] = useState<string>(
@@ -58,6 +98,7 @@ export function EditProfileForm({
   );
   const [showPassword, setShowPassword] = useState(false);
   const [errors, setErrors] = useState<Partial<Record<keyof EditProfileFormData, string>>>({});
+  const [guardianError, setGuardianError] = useState("");
   const [isSubmitting, setIsSubmitting] = useState(false);
   const initialRollNumber = (student.rollNumber || "").trim();
 
@@ -91,14 +132,59 @@ export function EditProfileForm({
       newErrors.phoneNumber = "Please enter a valid phone number";
     }
 
+    const today = todayDateInputValue();
+    if (formData.dateOfBirth && formData.dateOfBirth > today) {
+      newErrors.dateOfBirth = "Date of birth cannot be in the future";
+    }
+    if (
+      formData.whatsappNumber &&
+      !PHONE_PATTERN.test(formData.whatsappNumber)
+    ) {
+      newErrors.whatsappNumber = "Please enter a valid WhatsApp number";
+    }
+    if (
+      formData.referralSource === "other" &&
+      !formData.referralSourceOther.trim()
+    ) {
+      newErrors.referralSourceOther = "Please tell us how you heard about us";
+    }
+    if (
+      formData.dateOfBirth &&
+      formData.dateOfJoining &&
+      formData.dateOfJoining < formData.dateOfBirth
+    ) {
+      newErrors.dateOfJoining =
+        "Date of joining must be on or after date of birth";
+    }
+
     const trimmedRollNumber = formData.rollNumber.trim();
     const rollNumberChanged = trimmedRollNumber !== initialRollNumber;
     if (trimmedRollNumber && rollNumberChanged && !isValidRollNumber(trimmedRollNumber)) {
       newErrors.rollNumber = ROLL_NUMBER_ERROR_MESSAGE;
     }
 
+    let guardiansInvalid = false;
+    if (requiresParentDetails(formData.dateOfBirth)) {
+      if (!formData.motherName.trim()) {
+        newErrors.motherName = "Mother's name is required";
+      }
+      if (!formData.fatherName.trim()) {
+        newErrors.fatherName = "Father's name is required";
+      }
+      guardiansInvalid = formData.guardians.some((guardian) => {
+        const name = guardian.name.trim();
+        const relation = guardian.relation.trim();
+        return (name && !relation) || (!name && relation);
+      });
+      setGuardianError(
+        guardiansInvalid ? "Guardian name and relation are required" : "",
+      );
+    } else {
+      setGuardianError("");
+    }
+
     setErrors(newErrors);
-    return Object.keys(newErrors).length === 0;
+    return Object.keys(newErrors).length === 0 && !guardiansInvalid;
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -126,7 +212,29 @@ export function EditProfileForm({
         profilePicture: profilePictureUrl || undefined,
         phoneNumber: formData.phoneNumber.trim() || undefined,
         rollNumber: formData.rollNumber.trim() || undefined,
+        dateOfBirth: formData.dateOfBirth || undefined,
+        occupation: formData.occupation.trim() || undefined,
+        whatsappNumber: formData.whatsappNumber.trim() || undefined,
+        gender: formData.gender || undefined,
+        address: formData.address.trim() || undefined,
+        referralSource: formData.referralSource || undefined,
+        referralSourceOther:
+          formData.referralSource === "other"
+            ? formData.referralSourceOther.trim()
+            : "",
+        dateOfJoining: formData.dateOfJoining || undefined,
       };
+
+      if (requiresParentDetails(formData.dateOfBirth)) {
+        payload.motherName = formData.motherName.trim();
+        payload.fatherName = formData.fatherName.trim();
+        payload.guardians = formData.guardians
+          .map((guardian) => ({
+            name: guardian.name.trim(),
+            relation: guardian.relation.trim(),
+          }))
+          .filter((guardian) => guardian.name && guardian.relation);
+      }
 
       if (formData.password) {
         payload.password = formData.password;
@@ -142,7 +250,7 @@ export function EditProfileForm({
   };
 
   const handleInputChange = (
-    field: keyof EditProfileFormData,
+    field: Exclude<keyof EditProfileFormData, "guardians">,
     value: string | boolean
   ) => {
     setFormData((prev) => ({ ...prev, [field]: value }));
@@ -336,6 +444,297 @@ export function EditProfileForm({
         {errors.rollNumber && (
           <p className="text-sm text-red-600 mt-1">{errors.rollNumber}</p>
         )}
+      </div>
+
+      <div className="space-y-6 border-t border-gray-200 pt-6">
+        <h3 className="text-sm font-semibold text-gray-900">
+          Admission details
+        </h3>
+
+        <div>
+          <label
+            htmlFor="edit-date-of-birth"
+            className="block text-sm font-medium text-gray-700 mb-1"
+          >
+            Date of birth
+          </label>
+          <Input
+            id="edit-date-of-birth"
+            type="date"
+            max={todayDateInputValue()}
+            value={formData.dateOfBirth}
+            onChange={(e) => handleInputChange("dateOfBirth", e.target.value)}
+            className={errors.dateOfBirth ? "border-red-500" : ""}
+          />
+          {errors.dateOfBirth && (
+            <p className="text-sm text-red-600 mt-1">{errors.dateOfBirth}</p>
+          )}
+        </div>
+
+        <div>
+          <label
+            htmlFor="edit-gender"
+            className="block text-sm font-medium text-gray-700 mb-1"
+          >
+            Gender
+          </label>
+          <select
+            id="edit-gender"
+            value={formData.gender}
+            onChange={(e) => handleInputChange("gender", e.target.value)}
+            className={selectClass(Boolean(errors.gender))}
+          >
+            <option value="">Select gender</option>
+            {GENDERS.map((option) => (
+              <option key={option.value} value={option.value}>
+                {option.label}
+              </option>
+            ))}
+          </select>
+        </div>
+
+        <div>
+          <label
+            htmlFor="edit-occupation"
+            className="block text-sm font-medium text-gray-700 mb-1"
+          >
+            Occupation
+          </label>
+          <Input
+            id="edit-occupation"
+            type="text"
+            value={formData.occupation}
+            onChange={(e) => handleInputChange("occupation", e.target.value)}
+            placeholder="e.g. Student, Engineer"
+          />
+        </div>
+
+        <div>
+          <label
+            htmlFor="edit-whatsapp"
+            className="block text-sm font-medium text-gray-700 mb-1"
+          >
+            WhatsApp number
+          </label>
+          <Input
+            id="edit-whatsapp"
+            type="tel"
+            value={formData.whatsappNumber}
+            onChange={(e) =>
+              handleInputChange("whatsappNumber", e.target.value)
+            }
+            className={errors.whatsappNumber ? "border-red-500" : ""}
+            placeholder="Enter WhatsApp number"
+          />
+          {errors.whatsappNumber && (
+            <p className="text-sm text-red-600 mt-1">{errors.whatsappNumber}</p>
+          )}
+        </div>
+
+        <div>
+          <label
+            htmlFor="edit-address"
+            className="block text-sm font-medium text-gray-700 mb-1"
+          >
+            Address
+          </label>
+          <textarea
+            id="edit-address"
+            value={formData.address}
+            onChange={(e) => handleInputChange("address", e.target.value)}
+            rows={3}
+            className="border-input flex min-h-20 w-full rounded-md border bg-transparent px-3 py-2 text-sm shadow-xs outline-none focus-visible:border-ring focus-visible:ring-ring/50 focus-visible:ring-[3px]"
+            placeholder="House, street, city"
+          />
+        </div>
+
+        <div>
+          <label
+            htmlFor="edit-referral"
+            className="block text-sm font-medium text-gray-700 mb-1"
+          >
+            How did you hear about us
+          </label>
+          <select
+            id="edit-referral"
+            value={formData.referralSource}
+            onChange={(e) =>
+              handleInputChange("referralSource", e.target.value)
+            }
+            className={selectClass(false)}
+          >
+            <option value="">Select an option</option>
+            {REFERRAL_SOURCES.map((option) => (
+              <option key={option.value} value={option.value}>
+                {option.label}
+              </option>
+            ))}
+          </select>
+        </div>
+
+        {formData.referralSource === "other" && (
+          <div>
+            <label
+              htmlFor="edit-referral-other"
+              className="block text-sm font-medium text-gray-700 mb-1"
+            >
+              Please specify *
+            </label>
+            <Input
+              id="edit-referral-other"
+              type="text"
+              value={formData.referralSourceOther}
+              onChange={(e) =>
+                handleInputChange("referralSourceOther", e.target.value)
+              }
+              className={errors.referralSourceOther ? "border-red-500" : ""}
+              placeholder="Tell us how you heard about us"
+            />
+            {errors.referralSourceOther && (
+              <p className="text-sm text-red-600 mt-1">
+                {errors.referralSourceOther}
+              </p>
+            )}
+          </div>
+        )}
+
+        <div>
+          <label
+            htmlFor="edit-date-of-joining"
+            className="block text-sm font-medium text-gray-700 mb-1"
+          >
+            Date of joining
+          </label>
+          <Input
+            id="edit-date-of-joining"
+            type="date"
+            value={formData.dateOfJoining}
+            onChange={(e) => handleInputChange("dateOfJoining", e.target.value)}
+            className={errors.dateOfJoining ? "border-red-500" : ""}
+          />
+          {errors.dateOfJoining && (
+            <p className="text-sm text-red-600 mt-1">{errors.dateOfJoining}</p>
+          )}
+        </div>
+      </div>
+
+      <div className="space-y-4 border-t border-gray-200 pt-6">
+        <div>
+          <h3 className="text-sm font-semibold text-gray-900">Profile card</h3>
+          <p className="mt-1 text-sm text-gray-500">
+            {requiresParentDetails(formData.dateOfBirth)
+              ? "Mother's name and father's name are required because this student is 15 or under. Guardians are optional."
+              : ageFromDateOfBirth(formData.dateOfBirth) == null
+                ? "Add a date of birth to determine whether parent details are required."
+                : "Parent and guardian details are not required for students over 15."}
+          </p>
+        </div>
+        {requiresParentDetails(formData.dateOfBirth) ? (
+          <>
+            <div>
+              <label htmlFor="edit-mother-name" className="mb-1 block text-sm font-medium text-gray-700">
+                Mother&apos;s name *
+              </label>
+              <Input
+                id="edit-mother-name"
+                type="text"
+                value={formData.motherName}
+                onChange={(e) => handleInputChange("motherName", e.target.value)}
+                className={errors.motherName ? "border-red-500" : ""}
+                placeholder="Enter mother's name"
+              />
+              {errors.motherName ? (
+                <p className="mt-1 text-sm text-red-600">{errors.motherName}</p>
+              ) : null}
+            </div>
+            <div>
+              <label htmlFor="edit-father-name" className="mb-1 block text-sm font-medium text-gray-700">
+                Father&apos;s name *
+              </label>
+              <Input
+                id="edit-father-name"
+                type="text"
+                value={formData.fatherName}
+                onChange={(e) => handleInputChange("fatherName", e.target.value)}
+                className={errors.fatherName ? "border-red-500" : ""}
+                placeholder="Enter father's name"
+              />
+              {errors.fatherName ? (
+                <p className="mt-1 text-sm text-red-600">{errors.fatherName}</p>
+              ) : null}
+            </div>
+            <div className="space-y-3">
+              <div className="flex items-center justify-between gap-3">
+                <p className="text-sm font-medium text-gray-700">Guardians</p>
+                {formData.guardians.length < 3 ? (
+                  <button
+                    type="button"
+                    className="text-sm font-medium text-blue-600 hover:text-blue-700"
+                    onClick={() =>
+                      setFormData((prev) => ({
+                        ...prev,
+                        guardians: [...prev.guardians, { name: "", relation: "" }],
+                      }))
+                    }
+                  >
+                    Add guardian
+                  </button>
+                ) : null}
+              </div>
+              {formData.guardians.length === 0 ? (
+                <p className="text-sm text-gray-500">No guardians added. Up to 3 are allowed.</p>
+              ) : null}
+              {formData.guardians.map((guardian, index) => (
+                <div key={index} className="space-y-2 rounded-lg border p-3">
+                  <div className="flex items-center justify-between">
+                    <p className="text-sm font-medium text-gray-700">Guardian {index + 1}</p>
+                    <button
+                      type="button"
+                      className="text-sm text-gray-500 hover:text-gray-800"
+                      onClick={() =>
+                        setFormData((prev) => ({
+                          ...prev,
+                          guardians: prev.guardians.filter((_, itemIndex) => itemIndex !== index),
+                        }))
+                      }
+                    >
+                      Remove
+                    </button>
+                  </div>
+                  <Input
+                    type="text"
+                    value={guardian.name}
+                    onChange={(e) =>
+                      setFormData((prev) => ({
+                        ...prev,
+                        guardians: prev.guardians.map((item, itemIndex) =>
+                          itemIndex === index ? { ...item, name: e.target.value } : item,
+                        ),
+                      }))
+                    }
+                    placeholder="Guardian name"
+                    aria-label={`Guardian ${index + 1} name`}
+                  />
+                  <Input
+                    type="text"
+                    value={guardian.relation}
+                    onChange={(e) =>
+                      setFormData((prev) => ({
+                        ...prev,
+                        guardians: prev.guardians.map((item, itemIndex) =>
+                          itemIndex === index ? { ...item, relation: e.target.value } : item,
+                        ),
+                      }))
+                    }
+                    placeholder="Relation, e.g. Uncle"
+                    aria-label={`Guardian ${index + 1} relation`}
+                  />
+                </div>
+              ))}
+              {guardianError ? <p className="text-sm text-red-600">{guardianError}</p> : null}
+            </div>
+          </>
+        ) : null}
       </div>
 
       <div className="flex justify-end gap-2 pt-4">

@@ -4,9 +4,12 @@ import React, { useState, useRef } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
-import AuthService, { LoginResponse } from "@/services/auth";
+import { LoginResponse, useAuth } from "@/services/auth";
 import { client } from "@/services/api-client";
 import { uploadProfilePicture } from "@/services/upload";
+import { useCreatePackage } from "@/services/studentFee";
+import { PackageForm } from "@/components/fees/PackageForm";
+import { canManageStudentFees } from "@/lib/rbac";
 import { useModal } from "@/hooks/use-modal";
 import { Eye, EyeOff } from "lucide-react";
 import { toast } from "react-toastify";
@@ -16,6 +19,14 @@ import {
   ROLL_NUMBER_ERROR_MESSAGE,
   ROLL_NUMBER_PLACEHOLDER,
 } from "@/lib/roll-number";
+import {
+  GENDERS,
+  PHONE_PATTERN,
+  REFERRAL_SOURCES,
+  Gender,
+  ReferralSource,
+  todayDateInputValue,
+} from "@/lib/admission";
 
 interface StudentFormData {
   email: string;
@@ -25,19 +36,60 @@ interface StudentFormData {
   profilePicture: string | null | undefined;
   phoneNumber: string;
   rollNumber: string;
+  dateOfBirth: string;
+  occupation: string;
+  whatsappNumber: string;
+  gender: Gender | "";
+  address: string;
+  referralSource: ReferralSource | "";
+  referralSourceOther: string;
+  dateOfJoining: string;
 }
+
+interface RegisterStudentPayload {
+  email: string;
+  password: string;
+  name: string;
+  role: string;
+  profilePicture: string;
+  phoneNumber: string;
+  rollNumber: string;
+  dateOfBirth?: string;
+  occupation?: string;
+  whatsappNumber?: string;
+  gender?: Gender;
+  address?: string;
+  referralSource?: ReferralSource;
+  referralSourceOther?: string;
+  dateOfJoining?: string;
+}
+
+const selectClass = (hasError: boolean) =>
+  `border-input flex h-9 w-full rounded-md border bg-white px-3 text-sm shadow-xs outline-none focus-visible:border-ring focus-visible:ring-ring/50 focus-visible:ring-[3px] ${
+    hasError ? "border-red-500" : ""
+  }`;
 
 interface StudentFormProps {
   submitLabel?: string;
   cancelLabel?: string;
   type: "student" | "teacher";
+  /** When set, the student stays in the current modal and the parent advances the stepper. */
+  onStudentCreated?: (student: {
+    id: string;
+    name: string;
+    dateOfJoining: string;
+  }) => void;
 }
 
 export function StudentForm({
   submitLabel = "Add Student",
   type = "student",
+  onStudentCreated,
 }: StudentFormProps) {
   const queryClient = useQueryClient();
+  const { user } = useAuth();
+  const createPackage = useCreatePackage();
+  const { closeModal, openModal } = useModal();
   const [formData, setFormData] = useState<StudentFormData>({
     email: "",
     password: "",
@@ -46,16 +98,23 @@ export function StudentForm({
     profilePicture: null,
     phoneNumber: "",
     rollNumber: "",
+    dateOfBirth: "",
+    occupation: "",
+    whatsappNumber: "",
+    gender: "",
+    address: "",
+    referralSource: "",
+    referralSourceOther: "",
+    dateOfJoining: type === "student" ? todayDateInputValue() : "",
   });
 
-  const { closeModal } = useModal();
-  const [errors, setErrors] = useState<Partial<StudentFormData>>({});
+  const [errors, setErrors] = useState<Partial<Record<keyof StudentFormData, string>>>({});
   const [profilePreview, setProfilePreview] = useState<string>("");
   const [showPassword, setShowPassword] = useState<boolean>(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   const validateForm = (): boolean => {
-    const newErrors: Partial<StudentFormData> = {};
+    const newErrors: Partial<Record<keyof StudentFormData, string>> = {};
 
     // Email validation
     if (!formData.email.trim()) {
@@ -79,7 +138,7 @@ export function StudentForm({
     // Phone number validation (required)
     if (!formData.phoneNumber.trim()) {
       newErrors.phoneNumber = "Phone number is required";
-    } else if (!/^\+?[\d\s-()]+$/.test(formData.phoneNumber)) {
+    } else if (!PHONE_PATTERN.test(formData.phoneNumber)) {
       newErrors.phoneNumber = "Please enter a valid phone number";
     }
 
@@ -91,6 +150,50 @@ export function StudentForm({
       } else if (!isValidRollNumber(trimmedRollNumber)) {
         newErrors.rollNumber = ROLL_NUMBER_ERROR_MESSAGE;
       }
+
+      const today = todayDateInputValue();
+      if (!formData.dateOfBirth) {
+        newErrors.dateOfBirth = "Date of birth is required";
+      } else if (formData.dateOfBirth > today) {
+        newErrors.dateOfBirth = "Date of birth cannot be in the future";
+      }
+
+      if (!formData.occupation.trim()) {
+        newErrors.occupation = "Occupation is required";
+      }
+
+      if (!formData.whatsappNumber.trim()) {
+        newErrors.whatsappNumber = "WhatsApp number is required";
+      } else if (!PHONE_PATTERN.test(formData.whatsappNumber)) {
+        newErrors.whatsappNumber = "Please enter a valid WhatsApp number";
+      }
+
+      if (!formData.gender) {
+        newErrors.gender = "Gender is required";
+      }
+
+      if (!formData.address.trim()) {
+        newErrors.address = "Address is required";
+      }
+
+      if (!formData.referralSource) {
+        newErrors.referralSource = "Please select how you heard about us";
+      } else if (
+        formData.referralSource === "other" &&
+        !formData.referralSourceOther.trim()
+      ) {
+        newErrors.referralSourceOther = "Please tell us how you heard about us";
+      }
+
+      if (!formData.dateOfJoining) {
+        newErrors.dateOfJoining = "Date of joining is required";
+      } else if (
+        formData.dateOfBirth &&
+        formData.dateOfJoining < formData.dateOfBirth
+      ) {
+        newErrors.dateOfJoining =
+          "Date of joining must be on or after date of birth";
+      }
     }
 
     setErrors(newErrors);
@@ -99,7 +202,7 @@ export function StudentForm({
 
   // register student
   const { isPending, error, data, mutateAsync } = useMutation({
-    mutationFn: async (data: StudentFormData): Promise<any> => {
+    mutationFn: async (data: RegisterStudentPayload): Promise<LoginResponse> => {
       const response = await client("/auth/register", {
         method: "POST",
         data: data,
@@ -107,15 +210,9 @@ export function StudentForm({
       return response as unknown as LoginResponse;
     },
     onSuccess: () => {
-      closeModal();
       queryClient.invalidateQueries({
         queryKey: type === "student" ? ["students"] : ["teachers"],
       });
-      toast.success(
-        type === "student"
-          ? "Student added successfully"
-          : "Teacher added successfully",
-      );
     },
     onError: (error) => {
       const errorResponse = error as AxiosError<{ message: string }>;
@@ -146,11 +243,78 @@ export function StudentForm({
           }));
         }
       }
-      await mutateAsync({
-        ...formData,
+      const payload: RegisterStudentPayload = {
+        email: formData.email.trim(),
+        password: formData.password,
+        name: formData.name.trim(),
+        role: formData.role,
+        phoneNumber: formData.phoneNumber.trim(),
         rollNumber: formData.rollNumber.trim(),
         profilePicture: profileUrl || "",
-      });
+      };
+
+      if (
+        type === "student" &&
+        formData.gender &&
+        formData.referralSource
+      ) {
+        payload.dateOfBirth = formData.dateOfBirth;
+        payload.occupation = formData.occupation.trim();
+        payload.whatsappNumber = formData.whatsappNumber.trim();
+        payload.gender = formData.gender;
+        payload.address = formData.address.trim();
+        payload.referralSource = formData.referralSource;
+        payload.dateOfJoining = formData.dateOfJoining;
+        if (formData.referralSource === "other") {
+          payload.referralSourceOther = formData.referralSourceOther.trim();
+        }
+      }
+
+      let created: LoginResponse;
+      try {
+        created = await mutateAsync(payload);
+      } catch {
+        return;
+      }
+
+      const studentName = formData.name.trim();
+      toast.success(
+        type === "student"
+          ? "Student added successfully"
+          : "Teacher added successfully",
+      );
+
+      const studentId = created.user?.id;
+      if (type === "student" && studentId && onStudentCreated) {
+        onStudentCreated({
+          id: studentId,
+          name: studentName,
+          dateOfJoining: formData.dateOfJoining,
+        });
+        return;
+      }
+
+      closeModal();
+      if (type === "student" && studentId && canManageStudentFees(user?.role)) {
+        const joiningDate = formData.dateOfJoining;
+        window.setTimeout(() => {
+          openModal({
+            title: `Add package · ${studentName}`,
+            size: "lg",
+            content: (
+              <PackageForm
+                studentId={studentId}
+                defaultStartDate={joiningDate}
+                cancelLabel="Skip for now"
+                description={`${studentName} was added. Add their fee package now, or skip and add it later from the student profile.`}
+                onCreate={async (packagePayload) => {
+                  await createPackage.mutateAsync(packagePayload);
+                }}
+              />
+            ),
+          });
+        }, 0);
+      }
     }
   };
 
@@ -372,6 +536,200 @@ export function StudentForm({
           <p className="text-sm text-red-600 mt-1">{errors.rollNumber}</p>
         )}
       </div>
+
+      {type === "student" && (
+        <div className="space-y-6 border-t border-gray-200 pt-6">
+          <h3 className="text-sm font-semibold text-gray-900">
+            Admission details
+          </h3>
+
+          <div>
+            <label
+              htmlFor="student-date-of-birth"
+              className="block text-sm font-medium text-gray-700 mb-1"
+            >
+              Date of birth *
+            </label>
+            <Input
+              id="student-date-of-birth"
+              type="date"
+              max={todayDateInputValue()}
+              value={formData.dateOfBirth}
+              onChange={(e) => handleInputChange("dateOfBirth", e.target.value)}
+              className={errors.dateOfBirth ? "border-red-500" : ""}
+            />
+            {errors.dateOfBirth && (
+              <p className="text-sm text-red-600 mt-1">{errors.dateOfBirth}</p>
+            )}
+          </div>
+
+          <div>
+            <label
+              htmlFor="student-gender"
+              className="block text-sm font-medium text-gray-700 mb-1"
+            >
+              Gender *
+            </label>
+            <select
+              id="student-gender"
+              value={formData.gender}
+              onChange={(e) => handleInputChange("gender", e.target.value)}
+              className={selectClass(Boolean(errors.gender))}
+            >
+              <option value="">Select gender</option>
+              {GENDERS.map((option) => (
+                <option key={option.value} value={option.value}>
+                  {option.label}
+                </option>
+              ))}
+            </select>
+            {errors.gender && (
+              <p className="text-sm text-red-600 mt-1">{errors.gender}</p>
+            )}
+          </div>
+
+          <div>
+            <label
+              htmlFor="student-occupation"
+              className="block text-sm font-medium text-gray-700 mb-1"
+            >
+              Occupation *
+            </label>
+            <Input
+              id="student-occupation"
+              type="text"
+              value={formData.occupation}
+              onChange={(e) => handleInputChange("occupation", e.target.value)}
+              className={errors.occupation ? "border-red-500" : ""}
+              placeholder="e.g. Student, Engineer"
+              autoComplete="organization-title"
+            />
+            {errors.occupation && (
+              <p className="text-sm text-red-600 mt-1">{errors.occupation}</p>
+            )}
+          </div>
+
+          <div>
+            <label
+              htmlFor="student-whatsapp"
+              className="block text-sm font-medium text-gray-700 mb-1"
+            >
+              WhatsApp number *
+            </label>
+            <Input
+              id="student-whatsapp"
+              type="tel"
+              value={formData.whatsappNumber}
+              onChange={(e) =>
+                handleInputChange("whatsappNumber", e.target.value)
+              }
+              className={errors.whatsappNumber ? "border-red-500" : ""}
+              placeholder="Enter WhatsApp number"
+              autoComplete="tel"
+            />
+            {errors.whatsappNumber && (
+              <p className="text-sm text-red-600 mt-1">{errors.whatsappNumber}</p>
+            )}
+          </div>
+
+          <div>
+            <label
+              htmlFor="student-address"
+              className="block text-sm font-medium text-gray-700 mb-1"
+            >
+              Address *
+            </label>
+            <textarea
+              id="student-address"
+              value={formData.address}
+              onChange={(e) => handleInputChange("address", e.target.value)}
+              rows={3}
+              className={`border-input flex min-h-20 w-full rounded-md border bg-transparent px-3 py-2 text-sm shadow-xs outline-none focus-visible:border-ring focus-visible:ring-ring/50 focus-visible:ring-[3px] ${
+                errors.address ? "border-red-500" : ""
+              }`}
+              placeholder="House, street, city"
+              autoComplete="street-address"
+            />
+            {errors.address && (
+              <p className="text-sm text-red-600 mt-1">{errors.address}</p>
+            )}
+          </div>
+
+          <div>
+            <label
+              htmlFor="student-referral"
+              className="block text-sm font-medium text-gray-700 mb-1"
+            >
+              How did you hear about us *
+            </label>
+            <select
+              id="student-referral"
+              value={formData.referralSource}
+              onChange={(e) =>
+                handleInputChange("referralSource", e.target.value)
+              }
+              className={selectClass(Boolean(errors.referralSource))}
+            >
+              <option value="">Select an option</option>
+              {REFERRAL_SOURCES.map((option) => (
+                <option key={option.value} value={option.value}>
+                  {option.label}
+                </option>
+              ))}
+            </select>
+            {errors.referralSource && (
+              <p className="text-sm text-red-600 mt-1">{errors.referralSource}</p>
+            )}
+          </div>
+
+          {formData.referralSource === "other" && (
+            <div>
+              <label
+                htmlFor="student-referral-other"
+                className="block text-sm font-medium text-gray-700 mb-1"
+              >
+                Please specify *
+              </label>
+              <Input
+                id="student-referral-other"
+                type="text"
+                value={formData.referralSourceOther}
+                onChange={(e) =>
+                  handleInputChange("referralSourceOther", e.target.value)
+                }
+                className={errors.referralSourceOther ? "border-red-500" : ""}
+                placeholder="Tell us how you heard about us"
+              />
+              {errors.referralSourceOther && (
+                <p className="text-sm text-red-600 mt-1">
+                  {errors.referralSourceOther}
+                </p>
+              )}
+            </div>
+          )}
+
+          <div>
+            <label
+              htmlFor="student-date-of-joining"
+              className="block text-sm font-medium text-gray-700 mb-1"
+            >
+              Date of joining *
+            </label>
+            <Input
+              id="student-date-of-joining"
+              type="date"
+              value={formData.dateOfJoining}
+              onChange={(e) =>
+                handleInputChange("dateOfJoining", e.target.value)
+              }
+              className={errors.dateOfJoining ? "border-red-500" : ""}
+            />
+            {errors.dateOfJoining && (
+              <p className="text-sm text-red-600 mt-1">{errors.dateOfJoining}</p>
+            )}
+          </div>
+        </div>
+      )}
 
       {/* Hidden Role Field */}
       <input type="hidden" value={formData.role} />

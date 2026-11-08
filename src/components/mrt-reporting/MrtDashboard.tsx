@@ -1,7 +1,7 @@
 "use client";
 
 import { keepPreviousData, useQuery } from "@tanstack/react-query";
-import { ClipboardCheck, Clock3, Percent, RefreshCw } from "lucide-react";
+import { ClipboardCheck, Clock3, Percent, RefreshCw, UserX } from "lucide-react";
 import { useMemo, useState } from "react";
 import { getMrtReportingDashboard, reportingErrorMessage } from "@/services/mrtReporting";
 import type { MrtBranchRow, MrtInstrumentRow, MrtTeacherRow } from "@/types/mrtReporting";
@@ -21,6 +21,7 @@ function metricColumns<
     expected: number;
     submitted: number;
     missing: number;
+    absent: number;
     completionPercentage: number | null;
     averageTotalScore: number | null;
     averageScore: number | null;
@@ -49,8 +50,15 @@ function metricColumns<
       render: (row) => <CountCell value={row.submitted} />,
     },
     {
+      id: "absent",
+      header: "Absent",
+      align: "right",
+      sortValue: (row) => row.absent ?? 0,
+      render: (row) => <CountCell value={row.absent ?? 0} />,
+    },
+    {
       id: "missing",
-      header: "Pending",
+      header: "Missing",
       align: "right",
       sortValue: (row) => row.missing,
       render: (row) => <CountCell value={row.missing} />,
@@ -188,7 +196,7 @@ export function MrtDashboard() {
           </p>
         ) : null}
 
-        <section className="grid grid-cols-1 gap-3 sm:grid-cols-2 xl:grid-cols-4">
+        <section className="grid grid-cols-1 gap-3 sm:grid-cols-2 xl:grid-cols-5">
           <SummaryCard
             label="Expected reports"
             value={summary ? formatCount(summary.expected) : "—"}
@@ -204,7 +212,14 @@ export function MrtDashboard() {
             loading={dashboardQuery.isLoading}
           />
           <SummaryCard
-            label="Pending"
+            label="Absent"
+            value={summary ? formatCount(summary.absent ?? 0) : "—"}
+            icon={<UserX className="h-5 w-5" />}
+            tone="bg-slate-100 text-slate-700"
+            loading={dashboardQuery.isLoading}
+          />
+          <SummaryCard
+            label="Missing"
             value={summary ? formatCount(summary.missing) : "—"}
             icon={<Clock3 className="h-5 w-5" />}
             tone="bg-amber-50 text-amber-800"
@@ -225,6 +240,7 @@ export function MrtDashboard() {
             <span className="font-medium text-gray-900">
               {formatSigned(comparison.submittedDelta)} submitted
             </span>
+            {` · ${formatCount(comparison.current.absent ?? 0)} absent`}
             {comparison.completionPercentageDelta == null
               ? ". Completion change is unavailable when either month has no expected reports."
               : ` and ${formatSigned(comparison.completionPercentageDelta, 1)} pts completion.`}

@@ -196,6 +196,17 @@ export interface UpdateProfileData {
   profilePicture?: string;
   phoneNumber?: string;
   rollNumber?: string;
+  dateOfBirth?: string;
+  occupation?: string;
+  whatsappNumber?: string;
+  gender?: string;
+  address?: string;
+  referralSource?: string;
+  referralSourceOther?: string;
+  dateOfJoining?: string;
+  motherName?: string;
+  fatherName?: string;
+  guardians?: { name: string; relation: string }[];
 }
 
 // Update student profile

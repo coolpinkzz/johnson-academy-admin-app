@@ -3,6 +3,8 @@
 import ProtectedRoute from "@/components/ProtectedRoute";
 import { useAuth } from "@/services/auth";
 import { getDashboardAggregates } from "@/services/dashboard";
+import { useTicketStats } from "@/services/tickets";
+import { canAccessModule } from "@/lib/rbac";
 import {
   Bell,
   Users,
@@ -13,6 +15,7 @@ import {
   School,
   Loader2,
   RefreshCw,
+  LifeBuoy,
 } from "lucide-react";
 import React from "react";
 import { useRouter } from "next/navigation";
@@ -21,6 +24,10 @@ import { useQuery } from "@tanstack/react-query";
 const DashboardPage = () => {
   const { user } = useAuth();
   const router = useRouter();
+  const canViewTickets = canAccessModule(user?.role, "tickets");
+  const { data: ticketStats, isLoading: ticketsLoading } = useTicketStats({
+    enabled: canViewTickets,
+  });
 
   const {
     data: aggregates,
@@ -184,6 +191,34 @@ const DashboardPage = () => {
                     </button>
                   ),
                 )}
+                {canViewTickets ? (
+                  <button
+                    type="button"
+                    onClick={() => router.push("/dashboard/tickets?status=open")}
+                    className="group rounded-2xl border border-rose-100 bg-rose-50 p-5 text-left shadow-sm transition hover:border-rose-200 hover:bg-rose-100/80 hover:shadow-md"
+                  >
+                    <div className="flex items-start justify-between gap-3">
+                      <div>
+                        <p className="text-sm font-medium text-gray-500">
+                          Open tickets
+                        </p>
+                        {ticketsLoading ? (
+                          <div className="mt-2 h-9 w-20 animate-pulse rounded-md bg-rose-200/50" />
+                        ) : (
+                          <p className="mt-1 text-3xl font-bold tracking-tight text-gray-900 tabular-nums">
+                            {(ticketStats?.open ?? 0).toLocaleString()}
+                          </p>
+                        )}
+                        <p className="mt-2 text-xs font-medium text-rose-700 opacity-0 transition group-hover:opacity-100">
+                          Open concerns →
+                        </p>
+                      </div>
+                      <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-xl bg-rose-200/70 text-rose-800">
+                        <LifeBuoy className="h-6 w-6" />
+                      </div>
+                    </div>
+                  </button>
+                ) : null}
               </div>
             )}
           </section>

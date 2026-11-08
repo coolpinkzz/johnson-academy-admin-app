@@ -31,6 +31,15 @@ type PackageFormProps = {
   studentId: string;
   enrolledCourses?: CourseOption[];
   defaultCourseId?: string;
+  /** YYYY-MM-DD. Used when creating a package, including right after admission. */
+  defaultStartDate?: string;
+  description?: string;
+  cancelLabel?: string;
+  submitLabel?: string;
+  /** Stay in the parent modal after a package is saved. */
+  onFinished?: (info: { courseId: string; courseName: string }) => void;
+  /** Stay in the parent modal when the admin skips this step. */
+  onCancel?: () => void;
   lockCourse?: boolean;
   renewalOf?: FeePackage;
   editing?: FeePackage;
@@ -55,6 +64,12 @@ export function PackageForm({
   studentId,
   enrolledCourses = [],
   defaultCourseId,
+  defaultStartDate,
+  description,
+  cancelLabel = "Cancel",
+  submitLabel,
+  onFinished,
+  onCancel,
   lockCourse = false,
   renewalOf,
   editing,
@@ -70,7 +85,7 @@ export function PackageForm({
 
   const courseOptions = useMemo(() => {
     const fromApi = (coursesData?.results ?? []).map((course: Course) => ({
-      id: course.id,
+      id: course.id || course._id || "",
       name: course.name,
       instrument: course.instrument,
     }));
@@ -92,7 +107,7 @@ export function PackageForm({
     ? toDateKey(editing.startDate)
     : renewalOf
       ? addDaysToKey(toDateKey(renewalOf.endDate), 1)
-      : todayInIndia();
+      : defaultStartDate || todayInIndia();
 
   const initialAmount = editing?.amount ?? renewalOf?.amount ?? 0;
   const initialDuration = editing?.durationMonths ?? renewalOf?.durationMonths ?? 12;
@@ -107,7 +122,10 @@ export function PackageForm({
       amount: initialAmount,
       notes: editing?.notes ?? "",
       recordPayment: !isEdit,
-      payment: emptyPayment(initialAmount > 0 ? initialAmount : 1, todayInIndia()),
+      payment: emptyPayment(
+        initialAmount > 0 ? initialAmount : 1,
+        defaultStartDate && !editing && !renewalOf ? defaultStartDate : todayInIndia(),
+      ),
     },
   });
 
@@ -162,6 +180,16 @@ export function PackageForm({
             ? { initialPayment: toPaymentPayload(values.payment) }
             : {}),
         });
+        if (onFinished) {
+          const selectedCourse = courseOptions.find(
+            (course) => course.id === values.courseId,
+          );
+          const courseName = selectedCourse
+            ? courseLabel(selectedCourse)
+            : "Selected course";
+          onFinished({ courseId: values.courseId, courseName });
+          return;
+        }
       }
       closeModal();
     } finally {
@@ -177,6 +205,9 @@ export function PackageForm({
   return (
     <FormProvider {...form}>
       <form onSubmit={submit} className="space-y-5">
+        {description ? (
+          <p className="text-sm text-gray-600">{description}</p>
+        ) : null}
         <div>
           <FieldLabel htmlFor="package-course">Course</FieldLabel>
           <select
@@ -347,10 +378,10 @@ export function PackageForm({
           <Button
             type="button"
             variant="outline"
-            onClick={() => closeModal()}
+            onClick={() => (onCancel ? onCancel() : closeModal())}
             disabled={busy}
           >
-            Cancel
+            {cancelLabel}
           </Button>
           <Button type="submit" disabled={busy}>
             {busy
@@ -359,7 +390,7 @@ export function PackageForm({
                 ? "Update package"
                 : isRenew
                   ? "Renew package"
-                  : "Add package"}
+                  : submitLabel || "Add package"}
           </Button>
         </div>
       </form>
