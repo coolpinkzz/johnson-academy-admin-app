@@ -1,0 +1,202 @@
+"use client";
+
+import { client } from "@/services/api-client";
+import AuthService, { LoginResponse } from "@/services/auth";
+import { getDefaultRouteForRole, isStaffRole } from "@/lib/rbac";
+import { useMutation } from "@tanstack/react-query";
+import { useRouter } from "next/navigation";
+import React, { useState } from "react";
+import { useForm } from "react-hook-form";
+import Image from "next/image";
+import { Eye, EyeOff } from "lucide-react";
+import logoImage from "@/assets/logo.png";
+
+interface LoginFormData {
+  email: string;
+  password: string;
+}
+
+const LoginPage = () => {
+  const router = useRouter();
+  const [showPassword, setShowPassword] = useState(false);
+  const [accessError, setAccessError] = useState<string | null>(null);
+  const {
+    register,
+    handleSubmit,
+    formState: { errors },
+  } = useForm<LoginFormData>();
+
+  // Redirect if already authenticated staff
+  React.useEffect(() => {
+    if (!AuthService.isAuthenticated()) return;
+    const user = AuthService.getUser();
+    if (isStaffRole(user?.role)) {
+      router.replace(getDefaultRouteForRole(user.role));
+      return;
+    }
+    AuthService.clearAuth();
+  }, [router]);
+
+  const { isPending, error, mutate } = useMutation({
+    mutationFn: async (data: LoginFormData): Promise<LoginResponse> => {
+      const response = await client("/auth/login", {
+        method: "POST",
+        data: data,
+      });
+
+      return response as unknown as LoginResponse;
+    },
+    onSuccess: (data: LoginResponse) => {
+      setAccessError(null);
+
+      if (!isStaffRole(data.user.role)) {
+        AuthService.clearAuth();
+        setAccessError(
+          "This portal is for admin, aqsd, and master accounts only."
+        );
+        return;
+      }
+
+      AuthService.handleLoginSuccess(data);
+      router.replace(getDefaultRouteForRole(data.user.role));
+    },
+    onError: (err) => {
+      console.error("Login failed:", err);
+      setAccessError(null);
+    },
+  });
+
+  const onSubmit = (data: LoginFormData) => {
+    setAccessError(null);
+    mutate(data);
+  };
+
+  return (
+    <div className="min-h-screen w-full bg-gradient-to-br from-blue-50 to-indigo-100 flex items-start justify-center p-24">
+      <div className="max-w-md w-full space-y-4">
+        {/* Logo */}
+        <div className="flex justify-center">
+          <Image
+            src={logoImage}
+            alt="Johnson Academy Logo"
+            width={200}
+            height={200}
+            className="object-contain"
+            priority
+          />
+        </div>
+
+        {/* Header */}
+        <div className="text-center">
+          <h1 className="text-3xl font-bold text-gray-900">Johnson Academy</h1>
+          <p className="text-gray-600">Admin Portal</p>
+        </div>
+
+        {/* Login Form */}
+        <div className="bg-white rounded-xl shadow-lg p-8 border border-gray-100">
+          <form onSubmit={handleSubmit(onSubmit)} className="space-y-6">
+            <div>
+              <label
+                htmlFor="email"
+                className="block text-sm font-medium text-gray-700 mb-2"
+              >
+                Email Address
+              </label>
+              <input
+                id="email"
+                type="email"
+                {...register("email", {
+                  required: "Email is required",
+                  pattern: {
+                    value: /^[A-Z0-9._%+-]+@[A-Z0-9.-]+\.[A-Z]{2,}$/i,
+                    message: "Invalid email address",
+                  },
+                })}
+                className={`w-full px-3 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-colors text-gray-700 ${
+                  errors.email ? "border-red-300" : "border-gray-300"
+                }`}
+                placeholder="Enter your email"
+              />
+              {errors.email && (
+                <p className="mt-1 text-sm text-red-600">
+                  {errors.email.message}
+                </p>
+              )}
+            </div>
+
+            <div>
+              <label
+                htmlFor="password"
+                className="block text-sm font-medium text-gray-700 mb-2"
+              >
+                Password
+              </label>
+              <div className="relative">
+                <input
+                  id="password"
+                  type={showPassword ? "text" : "password"}
+                  autoComplete="current-password"
+                  {...register("password", {
+                    required: "Password is required",
+                    minLength: {
+                      value: 6,
+                      message: "Password must be at least 6 characters",
+                    },
+                  })}
+                  className={`w-full px-3 py-2 pr-10 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-colors text-gray-700 ${
+                    errors.password ? "border-red-300" : "border-gray-300"
+                  }`}
+                  placeholder="Enter your password"
+                />
+                <button
+                  type="button"
+                  onClick={() => setShowPassword((v) => !v)}
+                  className="absolute inset-y-0 right-0 flex items-center pr-3 text-gray-400 hover:text-gray-600 focus:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 rounded-r-lg"
+                  aria-label={showPassword ? "Hide password" : "Show password"}
+                >
+                  {showPassword ? (
+                    <EyeOff className="h-4 w-4" aria-hidden />
+                  ) : (
+                    <Eye className="h-4 w-4" aria-hidden />
+                  )}
+                </button>
+              </div>
+              {errors.password && (
+                <p className="mt-1 text-sm text-red-600">
+                  {errors.password.message}
+                </p>
+              )}
+            </div>
+
+            <button
+              type="submit"
+              disabled={isPending}
+              className="w-full bg-blue-600 text-white py-2 px-4 rounded-lg hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 transition-colors font-medium disabled:opacity-50 disabled:cursor-not-allowed"
+            >
+              {isPending ? "Signing In..." : "Sign In"}
+            </button>
+
+            {/* Error Display */}
+            {(error || accessError) && (
+              <div className="mt-4 p-3 bg-red-50 border border-red-200 rounded-lg">
+                <p className="text-sm text-red-600">
+                  {accessError ||
+                    "Login failed. Please check your credentials and try again."}
+                </p>
+              </div>
+            )}
+          </form>
+
+          {/* Footer */}
+          <div className="mt-6 text-center">
+            <p className="text-sm text-gray-500">
+              Protected staff access (admin / aqsd / master)
+            </p>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+};
+
+export default LoginPage;

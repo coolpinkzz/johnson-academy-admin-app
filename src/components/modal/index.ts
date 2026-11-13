@@ -1,0 +1,44 @@
+export { Modal } from "../ui/modal";
+export { ModalContainer } from "../ModalContainer";
+export { ModalExample } from "../ModalExample";
+export { ModalProvider } from "../../contexts/ModalContext";
+export { useModal } from "../../hooks/use-modal";
+export { useClassModals } from "./useClassModals";
+export type {
+  ModalData,
+  ModalContextType,
+  ModalProps,
+} from "../../types/modal";
+
+// Form Components
+export { StudentForm } from "./StudentForm";
+export { EditProfileForm } from "./EditProfileForm";
+export { EditTeacherForm } from "./EditTeacherForm";
+export { TeamMemberForm } from "./TeamMemberForm";
+export { EditTeamMemberForm } from "./EditTeamMemberForm";
+export { CourseForm } from "./CourseForm";
+export { EditCourseForm } from "./EditCourseForm";
+export { ModuleForm } from "./ModuleForm";
+export { SyllabusForm } from "./SyllabusForm";
+export { ClassForm } from "./ClassForm";
+export { BulkAddStudentsModal } from "./BulkAddStudentsModal";
+export { AddSingleStudentToClassModal } from "./AddSingleStudentToClassModal";
+export { MoveStudentToClassModal } from "./MoveStudentToClassModal";
+export { ViewStudentsInClassModal } from "./ViewStudentsInClassModal";
+export { default as StudentProgressModal } from "./StudentProgressModal";
+export { BookCompensationModal } from "./BookCompensationModal";
+export {
+  CompensationBookingDetail,
+  CompensationStatusBadge,
+} from "./CompensationBookingDetail";
+
+// Dialog Components
+export {
+  ConfirmationDialog,
+  DeleteConfirmation,
+  SuccessDialog,
+  InfoDialog,
+} from "./ConfirmationDialog";
+
+// Example Component
+export { ModalExamples } from "./ModalExamples";

@@ -1,0 +1,48 @@
+import type { Metadata } from "next";
+import { Geist, Geist_Mono } from "next/font/google";
+import "./globals.css";
+import Providers from "./providers";
+import DashboardSidebar from "@/components/DashboardSidebar";
+import { ModalContainer } from "@/components/modal";
+
+const geistSans = Geist({
+  variable: "--font-geist-sans",
+  subsets: ["latin"],
+});
+
+const geistMono = Geist_Mono({
+  variable: "--font-geist-mono",
+  subsets: ["latin"],
+});
+
+export const metadata: Metadata = {
+  title: "Johnson Academy Admin App",
+  description: "Johnson Academy Admin App",
+  robots: {
+    index: false,
+    follow: false,
+  },
+};
+
+export default function RootLayout({
+  children,
+}: {
+  children: React.ReactNode;
+}) {
+  return (
+    <html lang="en">
+      <body
+        className={`${geistSans.variable} ${geistMono.variable} antialiased`}
+      >
+        <Providers>
+          <div className="flex h-screen bg-gray-50">
+            <ModalContainer />
+            <div className="flex-1 flex flex-col overflow-y-auto">
+              {children}
+            </div>
+          </div>
+        </Providers>
+      </body>
+    </html>
+  );
+}
