@@ -1,5 +1,5 @@
 import { parseInputDate } from "@/lib/utils";
-import { toCompensationDateKey } from "@/types/compensation";
+import { todayInIndia, toCompensationDateKey } from "@/types/compensation";
 import type { FeePackage } from "@/types/studentFee";
 
 const DAY_MS = 24 * 60 * 60 * 1000;
@@ -92,6 +92,13 @@ export type CourseFeeGroup = {
   history: FeePackage[];
 };
 
+export type FeeProfileStatus =
+  | "expired"
+  | "expiring"
+  | "active"
+  | "upcoming"
+  | "none";
+
 /** Group a student's packages by course; the current one is the latest valid package. */
 export function groupPackagesByCourse(packages: FeePackage[]): CourseFeeGroup[] {
   const byCourse = new Map<string, FeePackage[]>();
@@ -120,4 +127,45 @@ export function groupPackagesByCourse(packages: FeePackage[]): CourseFeeGroup[] 
       };
     })
     .sort((a, b) => a.courseName.localeCompare(b.courseName));
+}
+
+/** Resolve the most urgent current package status for a student's profile row. */
+export function getFeeProfileStatus(
+  packages: FeePackage[],
+): FeeProfileStatus {
+  const currentPackages = groupPackagesByCourse(packages)
+    .map((group) => group.current)
+    .filter((pkg): pkg is FeePackage => pkg !== null);
+
+  if (currentPackages.length === 0) return "none";
+
+  const todayKey = todayInIndia();
+  const [year, month] = todayKey.split("-").map(Number);
+  const nextMonthEndKey = new Date(Date.UTC(year, month + 1, 0))
+    .toISOString()
+    .slice(0, 10);
+
+  if (currentPackages.some((pkg) => toDateKey(pkg.endDate) < todayKey)) {
+    return "expired";
+  }
+
+  const activePackages = currentPackages.filter(
+    (pkg) =>
+      toDateKey(pkg.startDate) <= todayKey &&
+      toDateKey(pkg.endDate) >= todayKey,
+  );
+
+  if (
+    activePackages.some(
+      (pkg) => toDateKey(pkg.endDate) <= nextMonthEndKey,
+    )
+  ) {
+    return "expiring";
+  }
+  if (activePackages.length > 0) return "active";
+  if (currentPackages.some((pkg) => toDateKey(pkg.startDate) > todayKey)) {
+    return "upcoming";
+  }
+
+  return "none";
 }
