@@ -26,6 +26,43 @@ import Image from "next/image";
 import avatarImage from "@/assets/avatar.png";
 import { PAGE_SIZE } from "@/constant";
 import { toast } from "react-toastify";
+import { type FeeProfileStatus } from "@/lib/fees";
+
+const FEE_PROFILE_STATUS_STYLES: Record<
+  FeeProfileStatus,
+  { row: string; avatar: string; badge: string; label: string }
+> = {
+  expired: {
+    row: "bg-red-50 hover:bg-red-100",
+    avatar: "ring-red-500",
+    badge: "bg-red-100 text-red-800",
+    label: "Expired",
+  },
+  expiring: {
+    row: "bg-yellow-50 hover:bg-yellow-100",
+    avatar: "ring-yellow-500",
+    badge: "bg-yellow-100 text-yellow-800",
+    label: "Ending soon",
+  },
+  active: {
+    row: "bg-green-50 hover:bg-green-100",
+    avatar: "ring-green-500",
+    badge: "bg-green-100 text-green-800",
+    label: "Active",
+  },
+  upcoming: {
+    row: "bg-green-50 hover:bg-green-100",
+    avatar: "ring-green-500",
+    badge: "bg-green-100 text-green-800",
+    label: "Upcoming",
+  },
+  none: {
+    row: "hover:bg-gray-50",
+    avatar: "ring-gray-200",
+    badge: "bg-gray-100 text-gray-600",
+    label: "No fee package",
+  },
+};
 
 const StudentsPage = () => {
   const { openModal, closeModal } = useModalContext();
@@ -370,77 +407,95 @@ const StudentsPage = () => {
                     </tr>
                   </thead>
                   <tbody className="bg-white divide-y divide-gray-200">
-                    {students.results.map((student) => (
-                      <tr
-                        key={student.id}
-                        onClick={() => handleViewClick(student)}
-                        className="hover:bg-gray-50 cursor-pointer"
-                      >
-                        <td className="px-6 py-4 whitespace-nowrap">
-                          <div className="flex items-center">
-                            <div className="h-10 w-10 rounded-full overflow-hidden shrink-0">
-                              <Image
-                                src={student.profilePicture || avatarImage}
-                                alt={student.name}
-                                width={40}
-                                height={40}
-                                className="h-10 w-10 object-cover"
-                              />
-                            </div>
-                            <div className="ml-4"> {student.name} </div>
-                          </div>
-                        </td>
-                        <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-                          {student.rollNumber || "Not assigned"}
-                        </td>
-                        <td className="px-6 py-4 text-sm text-gray-900">
-                          <StudentEnrolledClasses
-                            classes={student.enrolledClasses}
-                            variant="compact"
-                          />
-                        </td>
+                    {students.results.map((student) => {
+                      const statusStyle = student.feeProfileStatus
+                        ? FEE_PROFILE_STATUS_STYLES[student.feeProfileStatus]
+                        : undefined;
 
-                        <td className="px-6 py-4 whitespace-nowrap text-sm font-medium">
-                          <div
-                            className="flex items-center gap-2"
-                            onClick={(e) => e.stopPropagation()}
-                          >
-                            <button
-                              onClick={() => handleViewClick(student)}
-                              className="text-blue-600 hover:text-blue-800 flex items-center gap-1 hover:bg-blue-50 px-2 py-1 rounded transition-colors"
+                      return (
+                        <tr
+                          key={student.id}
+                          onClick={() => handleViewClick(student)}
+                          className={`${statusStyle?.row ?? "hover:bg-gray-50"} cursor-pointer`}
+                        >
+                          <td className="px-6 py-4 whitespace-nowrap">
+                            <div className="flex items-center">
+                              <div
+                                className={`h-10 w-10 rounded-full overflow-hidden shrink-0 ring-2 ring-offset-2 ${statusStyle?.avatar ?? "ring-gray-200"}`}
+                                title={statusStyle?.label}
+                              >
+                                <Image
+                                  src={student.profilePicture || avatarImage}
+                                  alt={student.name}
+                                  width={40}
+                                  height={40}
+                                  className="h-10 w-10 object-cover"
+                                />
+                              </div>
+                              <div className="ml-4 flex items-center gap-2">
+                                <span>{student.name}</span>
+                                {statusStyle ? (
+                                  <span
+                                    className={`rounded-full px-2 py-0.5 text-xs font-medium ${statusStyle.badge}`}
+                                  >
+                                    {statusStyle.label}
+                                  </span>
+                                ) : null}
+                              </div>
+                            </div>
+                          </td>
+                          <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
+                            {student.rollNumber || "Not assigned"}
+                          </td>
+                          <td className="px-6 py-4 text-sm text-gray-900">
+                            <StudentEnrolledClasses
+                              classes={student.enrolledClasses}
+                              variant="compact"
+                            />
+                          </td>
+
+                          <td className="px-6 py-4 whitespace-nowrap text-sm font-medium">
+                            <div
+                              className="flex items-center gap-2"
+                              onClick={(e) => e.stopPropagation()}
                             >
-                              <Eye className="h-4 w-4" />
-                              View
-                            </button>
-                            {/* <button
-                              onClick={() => handleEditClick(student)}
-                              className="text-green-600 hover:text-green-800 flex items-center gap-1 hover:bg-green-50 px-2 py-1 rounded transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
-                              disabled={isDeleting === student.id}
-                            >
-                              <Edit className="h-4 w-4" />
-                              Edit
-                            </button> */}
-                            <button
-                              onClick={() => handleDeleteClick(student)}
-                              className="text-red-600 hover:text-red-800 flex items-center gap-1 hover:bg-red-50 px-2 py-1 rounded transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
-                              disabled={isDeleting === student.id}
-                            >
-                              {isDeleting === student.id ? (
-                                <>
-                                  <div className="w-4 h-4 border-2 border-red-600 border-t-transparent rounded-full animate-spin"></div>
-                                  Deleting...
-                                </>
-                              ) : (
-                                <>
-                                  <Trash2 className="h-4 w-4" />
-                                  Delete
-                                </>
-                              )}
-                            </button>
-                          </div>
-                        </td>
-                      </tr>
-                    ))}
+                              <button
+                                onClick={() => handleViewClick(student)}
+                                className="text-blue-600 hover:text-blue-800 flex items-center gap-1 hover:bg-blue-50 px-2 py-1 rounded transition-colors"
+                              >
+                                <Eye className="h-4 w-4" />
+                                View
+                              </button>
+                              {/* <button
+                                onClick={() => handleEditClick(student)}
+                                className="text-green-600 hover:text-green-800 flex items-center gap-1 hover:bg-green-50 px-2 py-1 rounded transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                                disabled={isDeleting === student.id}
+                              >
+                                <Edit className="h-4 w-4" />
+                                Edit
+                              </button> */}
+                              <button
+                                onClick={() => handleDeleteClick(student)}
+                                className="text-red-600 hover:text-red-800 flex items-center gap-1 hover:bg-red-50 px-2 py-1 rounded transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                                disabled={isDeleting === student.id}
+                              >
+                                {isDeleting === student.id ? (
+                                  <>
+                                    <div className="w-4 h-4 border-2 border-red-600 border-t-transparent rounded-full animate-spin"></div>
+                                    Deleting...
+                                  </>
+                                ) : (
+                                  <>
+                                    <Trash2 className="h-4 w-4" />
+                                    Delete
+                                  </>
+                                )}
+                              </button>
+                            </div>
+                          </td>
+                        </tr>
+                      );
+                    })}
                   </tbody>
                 </table>
               )}

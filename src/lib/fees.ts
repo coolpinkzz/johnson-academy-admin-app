@@ -92,6 +92,13 @@ export type CourseFeeGroup = {
   history: FeePackage[];
 };
 
+export type FeeProfileStatus =
+  | "expired"
+  | "expiring"
+  | "active"
+  | "upcoming"
+  | "none";
+
 /** Group a student's packages by course; the current one is the latest valid package. */
 export function groupPackagesByCourse(packages: FeePackage[]): CourseFeeGroup[] {
   const byCourse = new Map<string, FeePackage[]>();
