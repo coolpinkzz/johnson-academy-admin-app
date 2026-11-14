@@ -4,7 +4,7 @@ import ProtectedRoute from "@/components/ProtectedRoute";
 import { DeleteConfirmation } from "@/components/modal/ConfirmationDialog";
 import { useModalContext } from "@/contexts/ModalContext";
 import { UserResponse } from "@/types/user";
-import { useQueries, useQuery, useQueryClient } from "@tanstack/react-query";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { Plus, Search, Trash2, Eye } from "lucide-react";
 import React, { useState, useEffect, useRef, useMemo } from "react";
 import { useRouter } from "next/navigation";
@@ -26,8 +26,7 @@ import Image from "next/image";
 import avatarImage from "@/assets/avatar.png";
 import { PAGE_SIZE } from "@/constant";
 import { toast } from "react-toastify";
-import { getStudentFees, studentFeesQueryKey } from "@/services/studentFee";
-import { getFeeProfileStatus, type FeeProfileStatus } from "@/lib/fees";
+import { type FeeProfileStatus } from "@/lib/fees";
 
 const FEE_PROFILE_STATUS_STYLES: Record<
   FeeProfileStatus,
@@ -138,14 +137,6 @@ const StudentsPage = () => {
   const filteredResultCount = isSearchMode
     ? searchData?.totalResults
     : infiniteData?.pages?.[0]?.totalResults;
-
-  const feeQueries = useQueries({
-    queries: (students?.results ?? []).map((student) => ({
-      queryKey: studentFeesQueryKey(student.id),
-      queryFn: () => getStudentFees(student.id),
-      staleTime: 5 * 60 * 1000,
-    })),
-  });
 
   // Infinite scroll: fetch next page when sentinel is in view
   useEffect(() => {
@@ -416,29 +407,22 @@ const StudentsPage = () => {
                     </tr>
                   </thead>
                   <tbody className="bg-white divide-y divide-gray-200">
-                    {students.results.map((student, index) => {
-                      const feeQuery = feeQueries[index];
-                      const feeStatus = feeQuery?.data
-                        ? getFeeProfileStatus(feeQuery.data.packages)
-                        : "none";
-                      const statusStyle = FEE_PROFILE_STATUS_STYLES[feeStatus];
-                      const statusLabel = feeQuery?.isPending
-                        ? "Loading fee status"
-                        : feeQuery?.isError
-                          ? "Fee status unavailable"
-                          : statusStyle.label;
+                    {students.results.map((student) => {
+                      const statusStyle = student.feeProfileStatus
+                        ? FEE_PROFILE_STATUS_STYLES[student.feeProfileStatus]
+                        : undefined;
 
                       return (
                         <tr
                           key={student.id}
                           onClick={() => handleViewClick(student)}
-                          className={`${statusStyle.row} cursor-pointer`}
+                          className={`${statusStyle?.row ?? "hover:bg-gray-50"} cursor-pointer`}
                         >
                           <td className="px-6 py-4 whitespace-nowrap">
                             <div className="flex items-center">
                               <div
-                                className={`h-10 w-10 rounded-full overflow-hidden shrink-0 ring-2 ring-offset-2 ${statusStyle.avatar}`}
-                                title={statusLabel}
+                                className={`h-10 w-10 rounded-full overflow-hidden shrink-0 ring-2 ring-offset-2 ${statusStyle?.avatar ?? "ring-gray-200"}`}
+                                title={statusStyle?.label}
                               >
                                 <Image
                                   src={student.profilePicture || avatarImage}
@@ -450,12 +434,13 @@ const StudentsPage = () => {
                               </div>
                               <div className="ml-4 flex items-center gap-2">
                                 <span>{student.name}</span>
-                                <span
-                                  className={`rounded-full px-2 py-0.5 text-xs font-medium ${statusStyle.badge}`}
-                                  title={statusLabel}
-                                >
-                                  {statusLabel}
-                                </span>
+                                {statusStyle ? (
+                                  <span
+                                    className={`rounded-full px-2 py-0.5 text-xs font-medium ${statusStyle.badge}`}
+                                  >
+                                    {statusStyle.label}
+                                  </span>
+                                ) : null}
                               </div>
                             </div>
                           </td>

@@ -111,7 +111,7 @@ const voidPayment = async ({
   return response as unknown as FeePackage;
 };
 
-/** Mutation that refreshes all fee queries and toasts on success/failure. */
+/** Mutation that refreshes fee screens, the student list colors, and toasts on success/failure. */
 function useFeeMutation<TVariables>(
   mutationFn: (variables: TVariables) => Promise<FeePackage>,
   messages: { success: string; error: string },
@@ -121,6 +121,7 @@ function useFeeMutation<TVariables>(
     mutationFn,
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: [STUDENT_FEES_KEY] });
+      queryClient.invalidateQueries({ queryKey: ["students"] });
       toast.success(messages.success);
     },
     onError: (error) => {

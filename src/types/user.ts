@@ -119,6 +119,8 @@ export interface User {
   fatherName?: string;
   guardians?: StudentGuardian[];
   isProfileCardComplete?: boolean;
+  /** Set on the student list for roles that can read fees. */
+  feeProfileStatus?: "expired" | "expiring" | "active" | "upcoming" | "none";
   profilePicture?: string;
   department?: string;
   /** Staff-only: branches whose students this user may access */
